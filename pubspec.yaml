@@ -15,7 +15,7 @@ dependencies:
   flutter_webrtc: ^0.12.0
   image_picker: ^1.1.2
   shared_preferences: ^2.3.2
-  record: ^5.1.2
+  record: ^6.0.0
   audioplayers: ^6.1.0
   path_provider: ^2.1.4
 
