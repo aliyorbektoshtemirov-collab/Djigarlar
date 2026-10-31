@@ -443,7 +443,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _set(() => _controls = !_controls),
-          child: Stack(children: [
+          child: Stack(fit: StackFit.expand, children: [
             const Positioned.fill(child: CallBackdrop()),
             Positioned.fill(
               child: SafeArea(
@@ -473,7 +473,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
               ),
             ),
             // sarlavha
-            AnimatedOpacity(
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedOpacity(
               opacity: _controls ? 1 : 0,
               duration: const Duration(milliseconds: 220),
               child: SafeArea(
@@ -516,6 +520,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                   ]),
                 ),
               ),
+            ),
             ),
             Positioned(
               left: 0,

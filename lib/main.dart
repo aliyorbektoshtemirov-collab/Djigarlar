@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'firebase_config.dart';
 import 'home.dart';
+import 'notify.dart';
 import 'theme.dart';
 import 'ui.dart';
 import 'username.dart';
@@ -23,6 +24,7 @@ Future<void> main() async {
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
+  await notify.init();
   runApp(const DjigarlarApp());
 }
 

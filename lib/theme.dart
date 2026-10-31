@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -488,6 +489,30 @@ String lastSeenText(Map<String, dynamic>? u) {
 //  Avatar
 // ---------------------------------------------------------------------------
 
+// base64 avatar keshi — har qayta chizishda qaytadan dekod qilinmasin.
+final _avatarCache = <String, Uint8List>{};
+final _avatarOrder = <String>[];
+
+Uint8List? avatarBytes(String b64) {
+  if (b64.isEmpty) return null;
+  final key = b64.length > 80
+      ? '${b64.length}:${b64.substring(0, 40)}:${b64.substring(b64.length - 40)}'
+      : b64;
+  final hit = _avatarCache[key];
+  if (hit != null) return hit;
+  try {
+    final bytes = base64Decode(b64);
+    _avatarCache[key] = bytes;
+    _avatarOrder.add(key);
+    if (_avatarOrder.length > 60) {
+      _avatarCache.remove(_avatarOrder.removeAt(0));
+    }
+    return bytes;
+  } catch (_) {
+    return null;
+  }
+}
+
 class Avatar extends StatelessWidget {
   final String name;
   final String? photo;
@@ -511,22 +536,18 @@ class Avatar extends StatelessWidget {
     final base = accents[colorIdx % accents.length];
     Widget child;
     final ph = photo;
-    if (ph != null && ph.isNotEmpty) {
-      Widget img;
-      try {
-        img = Image.memory(
-          base64Decode(ph),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-          filterQuality: FilterQuality.medium,
-          errorBuilder: (c, e, s) => _letter(base),
-        );
-      } catch (_) {
-        img = _letter(base);
-      }
-      child = img;
+    final bytes = ph == null ? null : avatarBytes(ph);
+    if (bytes != null) {
+      child = Image.memory(
+        bytes,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.low,
+        cacheWidth: (size * 3).round(),
+        errorBuilder: (c, e, s) => _letter(base),
+      );
     } else {
       child = _letter(base);
     }

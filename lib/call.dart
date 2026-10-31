@@ -409,7 +409,7 @@ class _CallScreenState extends State<CallScreen> {
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () => _set(() => _controls = !_controls),
-          child: Stack(children: [
+          child: Stack(fit: StackFit.expand, children: [
             const Positioned.fill(child: CallBackdrop()),
 
             // --- asosiy video / avatar ---
@@ -449,7 +449,11 @@ class _CallScreenState extends State<CallScreen> {
               _localPip(size, showLocalBig),
 
             // --- yuqori ma'lumot ---
-            AnimatedOpacity(
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedOpacity(
               opacity: _controls ? 1 : 0,
               duration: const Duration(milliseconds: 240),
               child: SafeArea(
@@ -482,6 +486,7 @@ class _CallScreenState extends State<CallScreen> {
                   ),
                 ),
               ),
+            ),
             ),
 
             // --- pastki boshqaruv ---
@@ -789,7 +794,7 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
       },
       child: Scaffold(
         backgroundColor: callBg,
-        body: Stack(children: [
+        body: Stack(fit: StackFit.expand, children: [
           const Positioned.fill(child: CallBackdrop()),
           SafeArea(
             child: Column(children: [

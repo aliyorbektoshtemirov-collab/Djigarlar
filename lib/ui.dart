@@ -499,8 +499,6 @@ class DjTabBar extends StatelessWidget {
   final int index;
   final List<DjTab> tabs;
   final ValueChanged<int> onTap;
-  final VoidCallback onCenter;
-  final IconData centerIcon;
   final ValueNotifier<int>? badge;
   final int badgeTab;
 
@@ -509,8 +507,6 @@ class DjTabBar extends StatelessWidget {
     required this.index,
     required this.tabs,
     required this.onTap,
-    required this.onCenter,
-    this.centerIcon = Icons.add_rounded,
     this.badge,
     this.badgeTab = 0,
   });
@@ -518,65 +514,23 @@ class DjTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.dj;
-    final half = tabs.length ~/ 2;
     return SafeArea(
       top: false,
-      child: SizedBox(
-        height: 110,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            Positioned(
-              left: 14,
-              right: 14,
-              bottom: 8,
-              child: Container(
-                height: 66,
-                decoration: BoxDecoration(
-                  color: p.card,
-                  borderRadius: BorderRadius.circular(33),
-                  border: Border.all(color: p.hairline, width: 0.8),
-                  boxShadow: p.lift,
-                ),
-                child: Row(children: [
-                  for (var i = 0; i < half; i++)
-                    Expanded(child: _item(context, i)),
-                  const SizedBox(width: 74),
-                  for (var i = half; i < tabs.length; i++)
-                    Expanded(child: _item(context, i)),
-                ]),
-              ),
-            ),
-            Positioned(
-              bottom: 44,
-              child: PressScale(
-                scale: 0.9,
-                onTap: onCenter,
-                child: Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: p.ink,
-                    border: Border.all(color: p.bg, width: 4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: p.gold.withValues(alpha: 0.35),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: ShaderMask(
-                    shaderCallback: (r) => goldGradient().createShader(r),
-                    child: Icon(centerIcon, color: Colors.white, size: 28),
-                  ),
-                ),
-              ),
-            ),
-          ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: p.card,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: p.hairline, width: 0.8),
+            boxShadow: p.lift,
+          ),
+          child: Row(
+            children: [
+              for (var i = 0; i < tabs.length; i++) _item(context, i),
+            ],
+          ),
         ),
       ),
     );
@@ -586,80 +540,82 @@ class DjTabBar extends StatelessWidget {
     final p = context.dj;
     final sel = i == index;
     final t = tabs[i];
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        if (i != index) HapticFeedback.selectionClick();
-        onTap(i);
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(clipBehavior: Clip.none, children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOutCubic,
-              padding: EdgeInsets.symmetric(
-                  horizontal: sel ? 16 : 10, vertical: sel ? 6 : 6),
-              decoration: BoxDecoration(
-                color: sel ? p.ink : Colors.transparent,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (ch, an) =>
-                    ScaleTransition(scale: an, child: ch),
-                child: Icon(
-                  sel ? t.filled : t.outline,
-                  key: ValueKey(sel),
-                  size: 21,
-                  color: sel ? p.inkOn : p.muted,
-                ),
-              ),
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          if (i != index) HapticFeedback.selectionClick();
+          onTap(i);
+        },
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.symmetric(
+                horizontal: sel ? 15 : 10, vertical: 9),
+            decoration: BoxDecoration(
+              color: sel ? p.ink : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
             ),
-            if (badge != null && i == badgeTab)
-              Positioned(
-                right: -6,
-                top: -4,
-                child: ValueListenableBuilder<int>(
-                  valueListenable: badge!,
-                  builder: (c, n, _) => AnimatedScale(
-                    scale: n > 0 ? 1 : 0,
-                    duration: const Duration(milliseconds: 260),
-                    curve: Curves.easeOutBack,
-                    child: Container(
-                      constraints: const BoxConstraints(minWidth: 18),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        gradient: goldGradient(),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: p.card, width: 1.4),
-                      ),
-                      child: Text(
-                        n > 99 ? '99+' : '$n',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeOutCubic,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Stack(clipBehavior: Clip.none, children: [
+                  Icon(
+                    sel ? t.filled : t.outline,
+                    size: 21,
+                    color: sel ? p.inkOn : p.muted,
+                  ),
+                  if (badge != null && i == badgeTab)
+                    Positioned(
+                      right: -7,
+                      top: -5,
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: badge!,
+                        builder: (c, n, _) => AnimatedScale(
+                          scale: n > 0 ? 1 : 0,
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOutBack,
+                          child: Container(
+                            constraints: const BoxConstraints(minWidth: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 1),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB8893B),
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(
+                                  color: sel ? p.ink : p.card, width: 1.4),
+                            ),
+                            child: Text(
+                              n > 99 ? '99+' : '$n',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
+                ]),
+                if (sel) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    t.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      color: p.inkOn,
+                    ),
                   ),
-                ),
-              ),
-          ]),
-          const SizedBox(height: 3),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 220),
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
-              color: sel ? p.ink : p.muted,
+                ],
+              ]),
             ),
-            child: Text(t.label),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -845,6 +801,160 @@ class FilterPills extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  Yuqoridan tushadigan ichki bildirishnoma
+// ---------------------------------------------------------------------------
+
+void showTopBanner(
+  OverlayState? overlay, {
+  required String title,
+  required String text,
+  Widget? leading,
+  VoidCallback? onTap,
+}) {
+  if (overlay == null || !overlay.mounted) return;
+  var removed = false;
+  late OverlayEntry entry;
+  void kill() {
+    if (removed) return;
+    removed = true;
+    entry.remove();
+    entry.dispose();
+  }
+
+  entry = OverlayEntry(
+    builder: (c) => _TopBanner(
+      title: title,
+      text: text,
+      leading: leading,
+      onTap: () {
+        kill();
+        onTap?.call();
+      },
+      onDone: kill,
+    ),
+  );
+  overlay.insert(entry);
+}
+
+class _TopBanner extends StatefulWidget {
+  final String title, text;
+  final Widget? leading;
+  final VoidCallback onTap;
+  final VoidCallback onDone;
+  const _TopBanner({
+    required this.title,
+    required this.text,
+    required this.onTap,
+    required this.onDone,
+    this.leading,
+  });
+
+  @override
+  State<_TopBanner> createState() => _TopBannerState();
+}
+
+class _TopBannerState extends State<_TopBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 300));
+
+  @override
+  void initState() {
+    super.initState();
+    _c.forward();
+    Future<void>.delayed(const Duration(milliseconds: 3600), () async {
+      if (!mounted) return;
+      await _c.reverse();
+      widget.onDone();
+    });
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.dj;
+    final curve = CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SlideTransition(
+        position:
+            Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+                .animate(curve),
+        child: FadeTransition(
+          opacity: curve,
+          child: Material(
+            color: Colors.transparent,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                child: GestureDetector(
+                  onTap: widget.onTap,
+                  onVerticalDragEnd: (_) => widget.onDone(),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: p.card,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: p.hairline, width: 0.8),
+                      boxShadow: p.lift,
+                    ),
+                    child: Row(children: [
+                      if (widget.leading != null) ...[
+                        widget.leading!,
+                        const SizedBox(width: 11),
+                      ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.2,
+                                color: p.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              widget.text,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 13, color: p.muted, height: 1.2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 20, color: p.faint),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

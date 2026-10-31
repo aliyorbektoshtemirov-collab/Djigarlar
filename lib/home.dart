@@ -7,6 +7,7 @@ import 'call.dart';
 import 'chat.dart';
 import 'info.dart';
 import 'main.dart' show navKey;
+import 'notify.dart';
 import 'profile.dart';
 import 'theme.dart';
 import 'ui.dart';
@@ -39,11 +40,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _tab = 0;
   bool _askingUsername = false;
   bool _inCall = false;
+  bool _askedPerm = false;
+  AppLifecycleState _life = AppLifecycleState.resumed;
+
+  bool get _foreground => _life == AppLifecycleState.resumed;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    notify.onOpen = _openFromNotification;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _askNotifPermission());
     _usersSub =
         FirebaseFirestore.instance.collection('users').snapshots().listen((s) {
       usersCache.value = {for (final d in s.docs) d.id: d.data()};
@@ -106,45 +113,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _notified[ch.doc.id] = key;
       final isGroup = d['isGroup'] == true;
       final title = isGroup ? ((d['name'] ?? 'Guruh') as String) : userName(from);
-      final ctx = navKey.currentContext;
-      if (ctx == null) continue;
+      final body = (d['lastText'] ?? '') as String;
+      final payload = '${ch.doc.id}\u0001${isGroup ? 1 : 0}\u0001$from\u0001$title';
+
+      if (!_foreground) {
+        // Ilova fonda — tizim bildirishnomasi
+        notify.message(
+          id: notifId(ch.doc.id),
+          title: title,
+          body: body,
+          chatId: payload,
+        );
+        continue;
+      }
+
+      final nav = navKey.currentState;
+      if (nav == null) continue;
       HapticFeedback.mediumImpact();
-      final m = ScaffoldMessenger.of(ctx);
-      m.hideCurrentSnackBar();
-      m.showSnackBar(SnackBar(
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 110),
-        content: Row(children: [
-          if (!isGroup) UserAvatar(uid: from, size: 32, showOnline: false),
-          if (!isGroup) const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w800)),
-                Text('${d['lastText'] ?? ''}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w400)),
-              ],
-            ),
-          ),
-        ]),
-        action: SnackBarAction(
-          label: 'Ochish',
-          onPressed: () => navKey.currentState?.push(DjPage<void>(ChatScreen(
-            chatId: ch.doc.id,
-            title: title,
-            isGroup: isGroup,
-            peerId: isGroup ? null : from,
-          ))),
-        ),
-      ));
+      showTopBanner(
+        nav.overlay,
+        title: title,
+        text: body,
+        leading: isGroup
+            ? Avatar(name: title, group: true, size: 38)
+            : UserAvatar(uid: from, size: 38, showOnline: false),
+        onTap: () => navKey.currentState?.push(DjPage<void>(ChatScreen(
+          chatId: ch.doc.id,
+          title: title,
+          isGroup: isGroup,
+          peerId: isGroup ? null : from,
+        ))),
+      );
     }
   }
 
@@ -158,7 +157,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _ping();
+    _life = state;
+    if (state == AppLifecycleState.resumed) {
+      _ping();
+      notify.cancelAll();
+    }
+  }
+
+  Future<void> _askNotifPermission() async {
+    if (_askedPerm) return;
+    _askedPerm = true;
+    await notify.ask();
+  }
+
+  /// Bildirishnoma bosilganda chatni ochadi.
+  void _openFromNotification(String payload) {
+    final parts = payload.split('\u0001');
+    if (parts.isEmpty) return;
+    final id = parts[0];
+    final isGroup = parts.length > 1 && parts[1] == '1';
+    final peer = parts.length > 2 ? parts[2] : '';
+    final title = parts.length > 3 ? parts[3] : '';
+    navKey.currentState?.push(DjPage<void>(ChatScreen(
+      chatId: id,
+      title: title.isEmpty ? 'Suhbat' : title,
+      isGroup: isGroup,
+      peerId: isGroup || peer.isEmpty ? null : peer,
+    )));
   }
 
   Future<void> _showIncoming(String id, Map<String, dynamic> data) async {
@@ -166,6 +191,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final nav = navKey.currentState;
     if (nav == null) return;
     _inCall = true;
+    // Ekran o'chiq yoki ilova fonda bo'lsa ham ko'rinsin
+    notify.call(
+      id: notifId(id),
+      name: (data['fromName'] ?? '?') as String,
+      video: data['video'] == true,
+    );
     final accepted = await nav.push<bool>(DjPage<bool>(
       IncomingCallScreen(
         callId: id,
@@ -175,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       fullscreen: true,
     ));
+    await notify.cancel(notifId(id));
     final ref = FirebaseFirestore.instance.collection('calls').doc(id);
     if (accepted == true) {
       await nav.push<void>(DjPage<void>(
@@ -259,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      ChatsTab(me: _me),
+      ChatsTab(me: _me, onNew: _newSheet),
       ContactsTab(me: _me),
       CallsTab(me: _me),
       ProfileScreen(me: _me),
@@ -286,8 +318,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       bottomNavigationBar: DjTabBar(
         index: _tab,
         badge: _totalUnread,
-        onCenter: _newSheet,
-        centerIcon: Icons.edit_rounded,
         tabs: const [
           DjTab(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded,
               'Chatlar'),
@@ -333,7 +363,8 @@ class _ChatItem {
 
 class ChatsTab extends StatefulWidget {
   final String me;
-  const ChatsTab({super.key, required this.me});
+  final VoidCallback onNew;
+  const ChatsTab({super.key, required this.me, required this.onNew});
   @override
   State<ChatsTab> createState() => _ChatsTabState();
 }
@@ -663,6 +694,13 @@ class _ChatsTabState extends State<ChatsTab> {
           BigHeader(
             title: 'Djigarlar',
             kicker: 'Suhbatlar',
+            actions: [
+              RoundAction(
+                icon: Icons.edit_rounded,
+                tooltip: 'Yangi suhbat',
+                onTap: widget.onNew,
+              ),
+            ],
             leading: ClipRRect(
               borderRadius: BorderRadius.circular(13),
               child: Image.asset('assets/logo.png',

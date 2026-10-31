@@ -2,6 +2,26 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
+## v0.8.1 — laglar, qo'ng'iroq ekrani va bildirishnomalar
+
+- **Qo'ng'iroq ekrani buzilgan edi**: `Stack` o'z balandligini eng katta "pozitsiyasiz" bolasidan olardi —
+  natijada butun ekran ~190 px ga siqilib, tugmalar tepaga chiqib ketgan, video uchun joy qolmagan edi
+  (shuning uchun kamera ishlamayotgandek ko'rinardi). `StackFit.expand` va sarlavha `Positioned` qilindi —
+  1-1 va guruh qo'ng'irog'ida ham tuzatildi
+- **Laglar**: avatarlar har qayta chizishda base64'dan qaytadan dekod qilinardi (presence har 30 soniyada
+  butun ro'yxatni yangilaydi) — endi keshlanadi va `cacheWidth` bilan kichik hajmda dekod qilinadi;
+  har bir xabar pufagi uchun alohida animatsiya kontrolleri yaratilardi (200 ta!) — olib tashlandi;
+  pufaklardagi soyalar ham olib tashlandi
+- **Pastki panel** qayta ishlandi: markazdagi tugma olib tashlandi, 4 ta bo'lim teng joylashdi,
+  tanlangani qora kapsulada ikonka + yozuv bilan ko'rinadi. "Yangi suhbat" tugmasi sarlavha yoniga ko'chdi
+- **Bildirishnomalar**: kirganda ruxsat so'raydi; ruxsat berilsa yangi xabar va kiruvchi qo'ng'iroq
+  tizim bildirishnomasi sifatida keladi (ilova fonda turganda ham). Ilova ochiq bo'lsa yuqoridan
+  chiroyli tasma tushadi (eski "g'alati" snackbar o'rniga)
+- Bildirishnomani bosganda to'g'ri chat ochiladi
+
+> Eslatma: ilova butunlay yopilganda (telefon xotiradan o'chirganda) bildirishnoma kelmaydi —
+> buning uchun Firebase Cloud Functions (Blaze tarifi) kerak. Fon rejimida ishlaydi.
+
 ## v0.8.0 — yangi dizayn va qo'ng'iroq tuzatishlari
 
 **Dizayn ("Ivory & Ink")**

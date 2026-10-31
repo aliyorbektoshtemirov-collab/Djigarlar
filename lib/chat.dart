@@ -1018,7 +1018,6 @@ class _ChatScreenState extends State<ChatScreen> {
         decoration: BoxDecoration(
           color: mine ? p.mine : p.theirs,
           border: mine ? null : Border.all(color: p.hairline, width: 0.8),
-          boxShadow: p.soft,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
@@ -1030,10 +1029,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
 
-    return FadeSlideIn(
-      duration: const Duration(milliseconds: 260),
-      offsetY: 10,
-      child: GestureDetector(
+    return GestureDetector(
         onLongPress: () {
           HapticFeedback.mediumImpact();
           _options(id, m, isPinned);
@@ -1081,8 +1077,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _banner(IconData icon, String title, String text, VoidCallback onClose) {
