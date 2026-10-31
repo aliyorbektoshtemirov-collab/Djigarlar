@@ -333,10 +333,6 @@ ThemeData buildTheme(Color seed, Brightness b) {
       elevation: 6,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
     ),
-    pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-    }),
   );
 }
 

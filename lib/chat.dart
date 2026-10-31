@@ -1800,7 +1800,9 @@ class _FullImageViewState extends State<FullImageView> {
 
   void _doubleTap() {
     final zoomed = _ctl.value.getMaxScaleOnAxis() > 1.2;
-    _ctl.value = zoomed ? Matrix4.identity() : (Matrix4.identity()..scale(2.4));
+    _ctl.value = zoomed
+        ? Matrix4.identity()
+        : Matrix4.diagonal3Values(2.4, 2.4, 1.0);
     setState(() {});
   }
 
