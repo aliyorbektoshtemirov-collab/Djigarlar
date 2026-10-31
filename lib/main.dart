@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'firebase_config.dart';
 import 'home.dart';
 import 'theme.dart';
+import 'ui.dart';
 import 'username.dart';
 
 final navKey = GlobalKey<NavigatorState>();
@@ -17,24 +18,30 @@ Future<void> main() async {
     return;
   }
   await Firebase.initializeApp(options: firebaseOptions);
+  // Oflayn kesh — xabarlar va chatlar darrov ko'rinadi, internet sekin bo'lsa ham.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
   runApp(const DjigarlarApp());
 }
 
 class _SetupApp extends StatelessWidget {
   const _SetupApp();
   @override
-  Widget build(BuildContext context) => const MaterialApp(
+  Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: Scaffold(
+        theme: buildTheme(accents[2], Brightness.light),
+        home: const Scaffold(
           body: SafeArea(
             child: Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: EdgeInsets.all(28),
                 child: Text(
                   "Firebase sozlanmagan.\n\nlib/firebase_config.dart fayliga Firebase qiymatlarini yozing "
                   "(yoki GitHub Secrets orqali kiriting) va ilovani qayta yig'ing.",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 16, height: 1.5),
                 ),
               ),
             ),
@@ -61,8 +68,7 @@ class DjigarlarApp extends StatelessWidget {
               stream: FirebaseAuth.instance.authStateChanges(),
               builder: (c, s) {
                 if (s.connectionState == ConnectionState.waiting) {
-                  return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()));
+                  return const _Splash();
                 }
                 return s.data == null ? const AuthScreen() : const HomeScreen();
               },
@@ -70,6 +76,33 @@ class DjigarlarApp extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _Splash extends StatelessWidget {
+  const _Splash();
+  @override
+  Widget build(BuildContext context) {
+    final p = context.dj;
+    return Scaffold(
+      body: Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: Image.asset('assets/logo.png',
+                width: 88,
+                height: 88,
+                errorBuilder: (c, e, s) => const SizedBox(width: 88)),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.2, color: p.muted),
+          ),
+        ]),
+      ),
+    );
+  }
 }
 
 class AuthScreen extends StatefulWidget {
@@ -85,7 +118,17 @@ class _AuthScreenState extends State<AuthScreen> {
   final _pass = TextEditingController();
   bool _register = false;
   bool _busy = false;
+  bool _hide = true;
   String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _username.dispose();
+    _email.dispose();
+    _pass.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (_register) {
@@ -95,6 +138,7 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
     }
+    FocusScope.of(context).unfocus();
     setState(() {
       _busy = true;
       _error = null;
@@ -116,138 +160,208 @@ class _AuthScreenState extends State<AuthScreen> {
           'color': accentIndex.value,
           'lastSeen': DateTime.now().millisecondsSinceEpoch,
         });
-        // Band bo'lsa, HomeScreen yangi username so'raydi.
         await claimUsername(cred.user!.uid, _username.text);
       } else {
         await auth.signInWithEmailAndPassword(
             email: _email.text.trim(), password: _pass.text);
       }
     } on FirebaseAuthException catch (e) {
-      setState(() => _error = e.message);
+      setState(() => _error = _msg(e.code, e.message));
+    } catch (_) {
+      setState(() => _error = 'Xatolik yuz berdi. Qayta urinib ko\'ring.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Widget _blob(double size, double o) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-            shape: BoxShape.circle, color: Colors.white.withValues(alpha: o)),
-      );
+  String _msg(String code, String? fallback) {
+    switch (code) {
+      case 'invalid-email':
+        return "Email noto'g'ri yozilgan";
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return "Email yoki parol noto'g'ri";
+      case 'email-already-in-use':
+        return 'Bu email allaqachon ro\'yxatdan o\'tgan';
+      case 'weak-password':
+        return 'Parol juda sodda — kamida 6 ta belgi';
+      case 'network-request-failed':
+        return 'Internet yo\'q';
+      default:
+        return fallback ?? 'Xatolik';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final p = context.dj;
     return Scaffold(
-      body: Stack(children: [
-        Container(decoration: BoxDecoration(gradient: headerGradient())),
-        Positioned(top: -80, right: -60, child: _blob(240, 0.12)),
-        Positioned(top: 160, left: -90, child: _blob(180, 0.08)),
-        Positioned(bottom: -110, right: -70, child: _blob(300, 0.10)),
-        SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 24, 22, 24),
+            physics: const BouncingScrollPhysics(),
+            child: FadeSlideIn(
+              offsetY: 26,
+              duration: const Duration(milliseconds: 560),
               child: Column(children: [
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10)),
-                    ],
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: p.lift,
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(30),
-                    child: Image.asset('assets/logo.png', width: 96, height: 96),
+                    borderRadius: BorderRadius.circular(28),
+                    child: Image.asset('assets/logo.png',
+                        width: 92,
+                        height: 92,
+                        errorBuilder: (c, e, s) => Container(
+                              width: 92,
+                              height: 92,
+                              color: p.ink,
+                              child: Icon(Icons.send_rounded,
+                                  color: p.inkOn, size: 40),
+                            )),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text('Djigarlar',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 38,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5)),
-                const SizedBox(height: 4),
-                Text("Do'stlar bilan yaqin suhbat",
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85))),
-                const SizedBox(height: 28),
+                const SizedBox(height: 20),
+                Text(
+                  'DJIGARLAR',
+                  style: TextStyle(
+                    color: p.ink,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 3,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "DO'STLAR BILAN YAQIN SUHBAT",
+                  style: TextStyle(
+                    color: p.gold,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2.4,
+                  ),
+                ),
+                const SizedBox(height: 32),
                 Container(
-                  padding: const EdgeInsets.all(22),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
                   decoration: BoxDecoration(
-                    color: cs.surface,
+                    color: p.card,
                     borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 30,
-                          offset: const Offset(0, 12)),
-                    ],
+                    border: Border.all(color: p.hairline, width: 0.8),
+                    boxShadow: p.soft,
                   ),
                   child: Column(children: [
-                    Text(_register ? 'Akkaunt ochish' : 'Xush kelibsiz!',
-                        style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 18),
-                    if (_register) ...[
-                      TextField(
-                          controller: _name,
-                          decoration: const InputDecoration(
-                              labelText: 'Ism',
-                              prefixIcon: Icon(Icons.person_outline))),
-                      const SizedBox(height: 12),
-                      TextField(
-                          controller: _username,
-                          autocorrect: false,
-                          decoration: const InputDecoration(
+                    Text(
+                      _register ? 'Akkaunt ochish' : 'Xush kelibsiz',
+                      style: TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                        color: p.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeOutCubic,
+                      child: Column(children: [
+                        if (_register) ...[
+                          TextField(
+                            controller: _name,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(
+                                labelText: 'Ism',
+                                prefixIcon: Icon(Icons.person_outline)),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _username,
+                            autocorrect: false,
+                            decoration: const InputDecoration(
                               labelText: 'Username',
                               hintText: 'masalan: ali_01',
-                              prefixIcon: Icon(Icons.alternate_email))),
-                      const SizedBox(height: 12),
-                    ],
+                              prefixIcon: Icon(Icons.alternate_email_rounded),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ]),
+                    ),
                     TextField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.mail_outline))),
+                      controller: _email,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                          labelText: 'Email',
+                          prefixIcon: Icon(Icons.mail_outline_rounded)),
+                    ),
                     const SizedBox(height: 12),
                     TextField(
-                        controller: _pass,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                            labelText: 'Parol',
-                            prefixIcon: Icon(Icons.lock_outline))),
+                      controller: _pass,
+                      obscureText: _hide,
+                      decoration: InputDecoration(
+                        labelText: 'Parol',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                              _hide
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: p.faint),
+                          onPressed: () => setState(() => _hide = !_hide),
+                        ),
+                      ),
+                    ),
                     if (_error != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(_error!, style: TextStyle(color: cs.error)),
+                        padding: const EdgeInsets.only(top: 14),
+                        child: Row(children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 17, color: p.danger),
+                          const SizedBox(width: 7),
+                          Expanded(
+                            child: Text(_error!,
+                                style: TextStyle(
+                                    color: p.danger,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ]),
                       ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 22),
                     FilledButton(
-                        onPressed: _busy ? null : _submit,
-                        child: _busy
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2.5))
-                            : Text(_register ? "Ro'yxatdan o'tish" : 'Kirish')),
+                      onPressed: _busy ? null : _submit,
+                      child: _busy
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2.4, color: p.inkOn),
+                            )
+                          : Text(_register ? "Ro'yxatdan o'tish" : 'Kirish'),
+                    ),
+                    const SizedBox(height: 6),
                     TextButton(
-                        onPressed: () => setState(() => _register = !_register),
-                        child: Text(_register
-                            ? 'Akkauntim bor'
-                            : 'Yangi akkaunt ochish')),
+                      onPressed: () => setState(() {
+                        _register = !_register;
+                        _error = null;
+                      }),
+                      child: Text(
+                        _register ? 'Akkauntim bor' : 'Yangi akkaunt ochish',
+                        style: TextStyle(color: p.muted),
+                      ),
+                    ),
                   ]),
                 ),
               ]),
             ),
           ),
         ),
-      ]),
+      ),
     );
   }
 }

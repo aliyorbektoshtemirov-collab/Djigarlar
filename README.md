@@ -2,6 +2,39 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
+## v0.8.0 — yangi dizayn va qo'ng'iroq tuzatishlari
+
+**Dizayn ("Ivory & Ink")**
+- Butunlay yangi ko'rinish: iliq oq (fil suyagi) fon, qora siyoh matn, oltin urg'u
+- Suzuvchi pastki panel (markazda yangi suhbat tugmasi), 4 bo'lim: Chatlar / Kontaktlar / Qo'ng'iroqlar / Profil
+- Animatsiyalar: sahifa o'tishlari, ro'yxat elementlari pastdan chiqishi, bosilganda kichrayish,
+  "yozmoqda" nuqtalari, qo'ng'iroqda tarqaluvchi halqalar, yuklanish effekti (shimmer)
+- Xabar pufaklari qayta ishlangan, oq/qora kontrast, yumshoq soyalar
+
+**Tuzatilgan xatolar**
+- **Chat pastda qolib ketishi**: `lastTime` serverdan kelguncha bo'sh bo'lgani uchun yangi xabar
+  vaqtsiz va ro'yxat oxirida turardi. Endi mijoz vaqti (`lastTimeMs`, `timeMs`) ham yoziladi —
+  xabar darrov tepaga chiqadi va vaqti ko'rinadi
+- **Sekinlik**: chat ekrani har soniyada qayta chizilardi (rasm har safar qaytadan dekod qilinardi).
+  Endi taymer faqat ovoz yozishda ishlaydi, rasmlar keshlanadi, xabar va chat bitta `batch` bilan
+  yoziladi, Firestore oflayn keshi yoqildi
+- **Video callda kamera tugmasi qo'ng'iroqni uzib yuborishi**: tugmalar bir-birining ustiga tushib
+  qolgan edi va ulanish "disconnected" bo'lishi bilanoq qo'ng'iroq yopilardi. Endi har bir tugma
+  o'z maydoniga ega, kamerani o'chirish faqat trekni o'chiradi, uzilishda 20 soniya qayta ulanish kutiladi
+- **Qizil tugma**: katta (74 px), aniq qizil, yorqin halqali; bosilganda ekran darrov yopiladi
+- **Rasmlar ochilmasligi**: hujjat 1 MB dan oshib ketgani uchun yuborilmay qolardi. Endi rasm
+  kichraytiriladi (1080 px, 55%), chegara 700 KB, xato bo'lsa xabar beriladi; pufakda o'lcham
+  oldindan egallanadi (silkinmaydi), to'liq ekranda zum, ikki marta bosish va pastga surib yopish
+
+**Yangi imkoniyatlar**
+- **Guruh video chat** (mesh): guruh chatida kamera tugmasi — hamma bir-birini ko'radi,
+  qo'ng'iroq ketayotganda chatda "Qo'shilish" tasmasi chiqadi
+- **Orqa/old kamerani almashtirish** video qo'ng'iroqda
+- Kiruvchi qo'ng'iroq endi butun ekranli (katta yashil/qizil tugmalar)
+- Qo'ng'iroqlar tarixi bo'limi
+- Kameradan to'g'ridan-to'g'ri rasm yuborish
+- `firestore.rules` yangilandi (`groupCalls`) — **Rules bo'limiga qayta qo'ying!**
+
 ## v0.7.2
 - Firebase qiymatlari (`lib/firebase_config.dart`) yozildi
 - firestore.rules: yangi suhbatning birinchi xabari darrov ko'rinadi (`usernames` qoidalari saqlangan). Rules'ga qayta qo'ying!
