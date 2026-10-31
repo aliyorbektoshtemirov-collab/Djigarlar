@@ -2,8 +2,11 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
-## v0.5.1
-- firestore.rules tuzatildi: yangi suhbatda birinchi xabar darrov ko'rinadi (Rules'ni Firebase'da qayta Publish qiling)
+## v0.6.2
+- Pastki panel iOS Telegram uslubida: tekis panel, to'ldirilgan/konturli ikonkalar, bounce animatsiya, tebranish, o'qilmagan xabarlar nishoni, sahifalar orasida silliq o'tish
+
+## v0.6
+- Yangi dizayn: gradient sarlavhalar, yumshoq kartalar, yangi kirish ekrani, sanalar chatda, yangi xabar maydoni, profil sarlavhasi, qo'ng'iroq ekrani foni
 
 ## v0.5
 - Ovozli xabarlar (mikrofon tugmasi, 60 soniyagacha)
