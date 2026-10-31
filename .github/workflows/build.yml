@@ -35,6 +35,21 @@ jobs:
               t = t.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 24')
               open(g, 'w').write(t)
           PY
+      - name: Plaginlar uchun compileSdk ni 36 ga ko'tarish
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/compilesdk.gradle <<'EOF'
+          allprojects {
+            afterEvaluate { p ->
+              if (p.hasProperty('android')) {
+                def cur = p.android.compileSdk
+                if (cur == null || cur < 36) {
+                  p.android.compileSdk = 36
+                }
+              }
+            }
+          }
+          EOF
       - run: flutter pub get
       - name: Logotipni o'rnatish
         run: dart run flutter_launcher_icons
