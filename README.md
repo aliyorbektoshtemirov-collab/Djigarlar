@@ -2,6 +2,10 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
+## v0.7.2
+- Firebase qiymatlari (`lib/firebase_config.dart`) yozildi
+- firestore.rules: yangi suhbatning birinchi xabari darrov ko'rinadi (`usernames` qoidalari saqlangan). Rules'ga qayta qo'ying!
+
 ## v0.7.0
 - Username: ro'yxatdan o'tishda tanlanadi (noyob, a-z 0-9 _), profilda o'zgartiriladi. Username'i yo'q eski foydalanuvchilarga kirganda so'raladi
 - Qidiruv: chatlar va kontaktlar qidiruvida ism yoki @username yozilsa, odam topiladi (suhbat hali bo'lmasa ham)
