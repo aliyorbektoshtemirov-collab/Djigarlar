@@ -9,6 +9,7 @@ import 'info.dart';
 import 'main.dart' show navKey;
 import 'profile.dart';
 import 'theme.dart';
+import 'username.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,8 +22,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _shown = <String>{};
   StreamSubscription? _callSub, _usersSub, _msgSub;
   final _notified = <String, String>{};
+  final _totalUnread = ValueNotifier<int>(0);
   Timer? _presence;
   int _tab = 0;
+  bool _askingUsername = false;
 
   @override
   void initState() {
@@ -31,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _usersSub =
         FirebaseFirestore.instance.collection('users').snapshots().listen((s) {
       usersCache.value = {for (final d in s.docs) d.id: d.data()};
+      _checkUsername();
     });
     _msgSub = FirebaseFirestore.instance
         .collection('chats')
@@ -56,7 +60,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _checkUsername() {
+    final u = usersCache.value[_me];
+    if (u == null || _askingUsername) return;
+    if (((u['username'] ?? '') as String).isNotEmpty) return;
+    _askingUsername = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await showUsernameDialog(context, _me, required: true);
+      _askingUsername = false;
+    });
+  }
+
   void _onChatChanges(QuerySnapshot<Map<String, dynamic>> snap) {
+    var total = 0;
+    for (final d in snap.docs) {
+      final u = (d.data()['unread'] as Map?)?[_me];
+      if (u is int) total += u;
+    }
+    _totalUnread.value = total;
     for (final ch in snap.docChanges) {
       if (ch.type != DocumentChangeType.modified) continue;
       final d = ch.doc.data();
@@ -140,35 +162,178 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _usersSub?.cancel();
     _msgSub?.cancel();
     _presence?.cancel();
+    _totalUnread.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: IndexedStack(index: _tab, children: [
-          ChatsTab(me: _me),
-          ContactsTab(me: _me),
-          ProfileScreen(me: _me),
-        ]),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (i) => setState(() => _tab = i),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.chat_bubble_outline),
-                selectedIcon: Icon(Icons.chat_bubble),
-                label: 'Chatlar'),
-            NavigationDestination(
-                icon: Icon(Icons.people_outline),
-                selectedIcon: Icon(Icons.people),
-                label: 'Kontaktlar'),
-            NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profil'),
+  Widget build(BuildContext context) {
+    final pages = <Widget>[
+      ChatsTab(me: _me),
+      ContactsTab(me: _me),
+      ProfileScreen(me: _me),
+    ];
+    return Scaffold(
+      body: Stack(fit: StackFit.expand, children: [
+        for (var i = 0; i < pages.length; i++)
+          IgnorePointer(
+            ignoring: i != _tab,
+            child: AnimatedOpacity(
+              opacity: i == _tab ? 1 : 0,
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOut,
+              child: AnimatedSlide(
+                offset: Offset((i - _tab) * 0.05, 0),
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                child: pages[i],
+              ),
+            ),
+          ),
+      ]),
+      bottomNavigationBar: _IosTabBar(
+        index: _tab,
+        unread: _totalUnread,
+        onTap: (i) {
+          if (i == _tab) return;
+          HapticFeedback.selectionClick();
+          setState(() => _tab = i);
+        },
+      ),
+    );
+  }
+}
+
+// ===================== iOS (Telegram) uslubidagi pastki panel =====================
+
+class _TabDef {
+  final IconData outline, filled;
+  final String label;
+  const _TabDef(this.outline, this.filled, this.label);
+}
+
+class _IosTabBar extends StatelessWidget {
+  final int index;
+  final ValueNotifier<int> unread;
+  final ValueChanged<int> onTap;
+  const _IosTabBar(
+      {required this.index, required this.unread, required this.onTap});
+
+  static const _items = [
+    _TabDef(Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chatlar'),
+    _TabDef(Icons.people_outline_rounded, Icons.people_rounded, 'Kontaktlar'),
+    _TabDef(Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final light = Theme.of(context).brightness == Brightness.light;
+    return Container(
+      decoration: BoxDecoration(
+        color: (light ? Colors.white : cs.surface).withValues(alpha: 0.97),
+        border: Border(
+            top: BorderSide(
+                color: cs.outlineVariant.withValues(alpha: 0.6), width: 0.5)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 56,
+          child: Row(children: [
+            for (var i = 0; i < _items.length; i++)
+              Expanded(
+                child: _TabButton(
+                  def: _items[i],
+                  selected: i == index,
+                  onTap: () => onTap(i),
+                  badge: i == 0 ? unread : null,
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  final _TabDef def;
+  final bool selected;
+  final VoidCallback onTap;
+  final ValueNotifier<int>? badge;
+  const _TabButton(
+      {required this.def,
+      required this.selected,
+      required this.onTap,
+      this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final target = selected ? cs.primary : cs.onSurfaceVariant;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: TweenAnimationBuilder<Color?>(
+        tween: ColorTween(end: target),
+        duration: const Duration(milliseconds: 220),
+        builder: (c, col, _) => Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(clipBehavior: Clip.none, children: [
+              AnimatedScale(
+                scale: selected ? 1.12 : 1.0,
+                duration: const Duration(milliseconds: 320),
+                curve: Curves.easeOutBack,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, anim) =>
+                      ScaleTransition(scale: anim, child: child),
+                  child: Icon(selected ? def.filled : def.outline,
+                      key: ValueKey(selected), size: 27, color: col),
+                ),
+              ),
+              if (badge != null)
+                Positioned(
+                  right: -11,
+                  top: -4,
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: badge!,
+                    builder: (c, n, _) => AnimatedScale(
+                      scale: n > 0 ? 1 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutBack,
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 18),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF3B30),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(n > 99 ? '99+' : '$n',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ),
+            ]),
+            const SizedBox(height: 3),
+            Text(def.label,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: col)),
           ],
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _IncomingDialog extends StatefulWidget {
@@ -266,6 +431,37 @@ class ChatsTab extends StatefulWidget {
 class _ChatsTabState extends State<ChatsTab> {
   int _filter = 0;
   String _q = '';
+
+  Widget _foundTile(BuildContext context, String id, Map<String, dynamic> u) {
+    final cs = Theme.of(context).colorScheme;
+    final name = (u['name'] ?? '?') as String;
+    return SoftCard(
+      child: ListTile(
+        leading: UserAvatar(uid: id, size: 50),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text('@${u['username']}', style: TextStyle(color: cs.primary)),
+        trailing: IconButton(
+          tooltip: 'Kontaktga saqlash',
+          icon: const Icon(Icons.person_add_alt_1),
+          onPressed: () async {
+            await addContact(widget.me, id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('$name kontaktlarga saqlandi')));
+            }
+          },
+        ),
+        onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => ChatScreen(
+                    chatId: pairId(widget.me, id),
+                    title: name,
+                    isGroup: false,
+                    peerId: id))),
+      ),
+    );
+  }
 
   List<_ChatItem> _build(QuerySnapshot<Map<String, dynamic>> snap) {
     final me = widget.me;
@@ -377,37 +573,61 @@ class _ChatsTabState extends State<ChatsTab> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: Row(children: [
-          ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/logo.png', width: 30, height: 30)),
-          const SizedBox(width: 10),
-          const Text('Djigarlar',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22)),
-        ]),
-      ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(context,
             MaterialPageRoute(builder: (_) => const CreateGroupScreen())),
-        child: const Icon(Icons.group_add),
+        icon: const Icon(Icons.group_add),
+        label: const Text('Guruh', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: TextField(
-            onChanged: (v) => setState(() => _q = v.toLowerCase()),
-            decoration: const InputDecoration(
-                hintText: 'Qidirish', prefixIcon: Icon(Icons.search)),
+        Container(
+          decoration: BoxDecoration(
+            gradient: headerGradient(),
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(32)),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+              child: Column(children: [
+                Row(children: [
+                  ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Image.asset('assets/logo.png',
+                          width: 38, height: 38)),
+                  const SizedBox(width: 12),
+                  const Text('Djigarlar',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800)),
+                ]),
+                const SizedBox(height: 14),
+                TextField(
+                  style: const TextStyle(color: Colors.white),
+                  cursorColor: Colors.white,
+                  onChanged: (v) => setState(() => _q = v.toLowerCase()),
+                  decoration: InputDecoration(
+                    hintText: 'Qidirish',
+                    hintStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                    fillColor: Colors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+              ]),
+            ),
           ),
         ),
         SizedBox(
-          height: 44,
+          height: 54,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             children: [
-              for (final e in ['Hammasi', 'Shaxsiy', 'Guruhlar', 'Arxiv'].asMap().entries)
+              for (final e in ['Hammasi', 'Shaxsiy', 'Guruhlar', 'Arxiv']
+                  .asMap()
+                  .entries)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
@@ -432,93 +652,147 @@ class _ChatsTabState extends State<ChatsTab> {
                 if (!s.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                var items = _build(s.data!);
+                final allItems = _build(s.data!);
+                var items = allItems;
                 items = _filter == 3
                     ? items.where((i) => i.archived).toList()
                     : items.where((i) => !i.archived).toList();
                 if (_filter == 1) items = items.where((i) => !i.isGroup).toList();
                 if (_filter == 2) items = items.where((i) => i.isGroup).toList();
+                final qn = normalizeUsername(_q);
                 if (_q.isNotEmpty) {
                   items = items
-                      .where((i) => i.title.toLowerCase().contains(_q))
+                      .where((i) =>
+                          i.title.toLowerCase().contains(qn) ||
+                          (i.peer != null && usernameOf(i.peer!).contains(qn)))
                       .toList();
                 }
+                final chatPeers =
+                    allItems.map((i) => i.peer).whereType<String>().toSet();
+                final found = (qn.length >= 2 && _filter != 2 && _filter != 3)
+                    ? findByUsername(qn, widget.me)
+                        .where((e) => !chatPeers.contains(e.key))
+                        .toList()
+                    : <UserEntry>[];
                 items.sort((a, b) {
                   if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
                   final ta = a.time ?? DateTime.fromMillisecondsSinceEpoch(0);
                   final tb = b.time ?? DateTime.fromMillisecondsSinceEpoch(0);
                   return tb.compareTo(ta);
                 });
+                if (items.isEmpty && found.isEmpty) {
+                  return Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.chat_bubble_outline,
+                          size: 56, color: cs.outlineVariant),
+                      const SizedBox(height: 12),
+                      Text('Bu yerda hali hech narsa yo\'q',
+                          style: TextStyle(color: cs.onSurfaceVariant)),
+                    ]),
+                  );
+                }
                 return ListView.builder(
-                  itemCount: items.length,
+                  padding: const EdgeInsets.only(top: 2, bottom: 96),
+                  itemCount: items.length + (found.isEmpty ? 0 : found.length + 1),
                   itemBuilder: (c, i) {
+                    if (i >= items.length) {
+                      final k = i - items.length;
+                      if (k == 0) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                          child: Text("Username bo'yicha topildi",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.primary)),
+                        );
+                      }
+                      return _foundTile(context, found[k - 1].key, found[k - 1].value);
+                    }
                     final it = items[i];
                     final peerStatus = it.peer == null
                         ? ''
                         : (usersCache.value[it.peer]?['status'] ?? '') as String;
                     final mineLast = it.lastFrom == widget.me;
-                    return ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      leading: _leading(it),
-                      title: Row(children: [
-                        Flexible(
-                            child: Text(it.title,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 16))),
-                        if (peerStatus.isNotEmpty) ...[
-                          const SizedBox(width: 4),
-                          Text(peerStatus)
-                        ],
-                        if (it.pinned) ...[
-                          const SizedBox(width: 4),
-                          Icon(Icons.push_pin, size: 14, color: cs.outline)
-                        ],
-                      ]),
-                      subtitle: Text(
-                        it.lastText.isEmpty
-                            ? (it.saved ? "Eslatmalar va fayllar" : 'Xabar yo\'q')
-                            : (mineLast ? 'Siz: ${it.lastText}' : it.lastText),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (it.time != null)
-                            Text(fmtChatTime(it.time!),
-                                style: TextStyle(
-                                    fontSize: 12, color: cs.onSurfaceVariant)),
-                          if (it.unread > 0) ...[
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                  color: cs.primary,
-                                  borderRadius: BorderRadius.circular(12)),
-                              child: Text('${it.unread}',
-                                  style: TextStyle(
-                                      color: cs.onPrimary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600)),
-                            ),
+                    final unread = it.unread > 0;
+                    return SoftCard(
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 4),
+                        leading: _leading(it),
+                        title: Row(children: [
+                          Flexible(
+                              child: Text(it.title,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16))),
+                          if (peerStatus.isNotEmpty) ...[
+                            const SizedBox(width: 4),
+                            Text(peerStatus)
                           ],
-                        ],
+                          if (it.pinned) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.push_pin, size: 14, color: cs.outline)
+                          ],
+                        ]),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            it.lastText.isEmpty
+                                ? (it.saved
+                                    ? 'Eslatmalar va fayllar'
+                                    : "Xabar yo'q")
+                                : (mineLast ? 'Siz: ${it.lastText}' : it.lastText),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontWeight:
+                                    unread ? FontWeight.w600 : FontWeight.w400,
+                                color: unread
+                                    ? cs.onSurface
+                                    : cs.onSurfaceVariant),
+                          ),
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (it.time != null)
+                              Text(fmtChatTime(it.time!),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: unread
+                                          ? cs.primary
+                                          : cs.onSurfaceVariant)),
+                            if (unread) ...[
+                              const SizedBox(height: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                    gradient: headerGradient(),
+                                    borderRadius: BorderRadius.circular(12)),
+                                child: Text('${it.unread}',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ],
+                        ),
+                        onLongPress: () => _pinSheet(it),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                      chatId: it.id,
+                                      title: it.title,
+                                      isGroup: it.isGroup,
+                                      saved: it.saved,
+                                      peerId: it.peer,
+                                    ))),
                       ),
-                      onLongPress: () => _pinSheet(it),
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                    chatId: it.id,
-                                    title: it.title,
-                                    isGroup: it.isGroup,
-                                    saved: it.saved,
-                                    peerId: it.peer,
-                                  ))),
                     );
                   },
                 );
@@ -542,6 +816,76 @@ class ContactsTab extends StatefulWidget {
 
 class _ContactsTabState extends State<ContactsTab> {
   String _q = '';
+
+  Widget _header(String t) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+      child: Text(t,
+          style: TextStyle(fontWeight: FontWeight.w700, color: cs.primary)),
+    );
+  }
+
+  Widget _tile(String id, Map<String, dynamic> u, {required bool saved}) {
+    final cs = Theme.of(context).colorScheme;
+    final name = (u['name'] ?? '?') as String;
+    final status = (u['status'] ?? '') as String;
+    final un = (u['username'] ?? '') as String;
+    final online = isOnline(u);
+    final sub = un.isNotEmpty
+        ? '@$un${online ? ' · onlayn' : ''}'
+        : (online ? 'onlayn' : lastSeenText(u));
+    return SoftCard(
+      child: ListTile(
+        leading: GestureDetector(
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => UserProfileScreen(uid: id))),
+          child: UserAvatar(uid: id, size: 50),
+        ),
+        title: Row(children: [
+          Flexible(
+              child: Text(name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
+          if (status.isNotEmpty) ...[const SizedBox(width: 4), Text(status)],
+        ]),
+        subtitle: Text(sub,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: online ? cs.primary : cs.onSurfaceVariant)),
+        trailing: saved
+            ? PopupMenuButton<String>(
+                onSelected: (v) {
+                  if (v == 'del') removeContact(widget.me, id);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                      value: 'del', child: Text("Kontaktdan o'chirish")),
+                ],
+              )
+            : IconButton(
+                tooltip: 'Kontaktga saqlash',
+                icon: const Icon(Icons.person_add_alt_1),
+                onPressed: () async {
+                  await addContact(widget.me, id);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('$name kontaktlarga saqlandi')));
+                  }
+                },
+              ),
+        onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => ChatScreen(
+                    chatId: pairId(widget.me, id),
+                    title: name,
+                    isGroup: false,
+                    peerId: id))),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -553,69 +897,55 @@ class _ContactsTabState extends State<ContactsTab> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: TextField(
-            onChanged: (v) => setState(() => _q = v.toLowerCase()),
+            autocorrect: false,
+            onChanged: (v) => setState(() => _q = v),
             decoration: const InputDecoration(
-                hintText: 'Ism bo\'yicha qidirish', prefixIcon: Icon(Icons.search)),
+                hintText: 'Ism yoki @username',
+                prefixIcon: Icon(Icons.search)),
           ),
         ),
         Expanded(
           child: ValueListenableBuilder(
             valueListenable: usersCache,
             builder: (c, map, _) {
-              final list = map.entries
-                  .where((e) => e.key != widget.me)
-                  .where((e) =>
-                      ((e.value['name'] ?? '') as String)
-                          .toLowerCase()
-                          .contains(_q))
-                  .toList();
-              if (list.isEmpty) {
-                return const Center(child: Text('Hech kim topilmadi'));
+              final qn = normalizeUsername(_q);
+              final saved = myContacts(widget.me).where(map.containsKey).toList();
+              final mine = saved.where((id) {
+                if (qn.isEmpty) return true;
+                final u = map[id]!;
+                return ((u['name'] ?? '') as String).toLowerCase().contains(qn) ||
+                    ((u['username'] ?? '') as String).contains(qn);
+              }).toList()
+                ..sort((a, b) => ((map[a]!['name'] ?? '') as String)
+                    .toLowerCase()
+                    .compareTo(((map[b]!['name'] ?? '') as String).toLowerCase()));
+              final found = qn.length >= 2
+                  ? findByUsername(qn, widget.me)
+                      .where((e) => !saved.contains(e.key))
+                      .toList()
+                  : <UserEntry>[];
+              if (mine.isEmpty && found.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      qn.isEmpty
+                          ? "Kontaktlar yo'q.\nDo'stingizning @username ini qidiruvga yozing va saqlang."
+                          : 'Hech kim topilmadi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                );
               }
-              return ListView.builder(
-                itemCount: list.length,
-                itemBuilder: (c, i) {
-                  final id = list[i].key;
-                  final u = list[i].value;
-                  final name = (u['name'] ?? '?') as String;
-                  final status = (u['status'] ?? '') as String;
-                  final bio = (u['bio'] ?? '') as String;
-                  return ListTile(
-                    leading: GestureDetector(
-                      onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => UserProfileScreen(uid: id))),
-                      child: UserAvatar(uid: id, size: 50),
-                    ),
-                    title: Row(children: [
-                      Flexible(
-                          child: Text(name,
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600))),
-                      if (status.isNotEmpty) ...[
-                        const SizedBox(width: 4),
-                        Text(status)
-                      ],
-                    ]),
-                    subtitle: Text(
-                      isOnline(u) ? 'onlayn' : (bio.isNotEmpty ? bio : lastSeenText(u)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: isOnline(u) ? cs.primary : cs.onSurfaceVariant),
-                    ),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                                chatId: pairId(widget.me, id),
-                                title: name,
-                                isGroup: false,
-                                peerId: id))),
-                  );
-                },
+              return ListView(
+                padding: const EdgeInsets.only(bottom: 96),
+                children: [
+                  if (mine.isNotEmpty) _header('Mening kontaktlarim'),
+                  for (final id in mine) _tile(id, map[id]!, saved: true),
+                  if (found.isNotEmpty) _header("Username bo'yicha topildi"),
+                  for (final e in found) _tile(e.key, e.value, saved: false),
+                ],
               );
             },
           ),
@@ -637,61 +967,127 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   final _name = TextEditingController();
   final _picked = <String>{};
   final String _me = FirebaseAuth.instance.currentUser!.uid;
+  String _q = '';
   bool _busy = false;
 
+  void _snack(String t) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t)));
+
   Future<void> _create() async {
-    if (_name.text.trim().isEmpty || _picked.isEmpty) return;
+    final name = _name.text.trim();
+    if (name.isEmpty) return _snack('Guruh nomini kiriting');
+    if (_picked.isEmpty) return _snack("Kamida bitta a'zo tanlang");
     setState(() => _busy = true);
-    await FirebaseFirestore.instance.collection('chats').add({
-      'name': _name.text.trim(),
-      'isGroup': true,
-      'members': [_me, ..._picked],
-      'createdBy': _me,
-      'createdAt': FieldValue.serverTimestamp(),
-      'lastTime': FieldValue.serverTimestamp(),
-      'lastText': 'Guruh yaratildi',
-      'lastFrom': '',
-    });
-    if (mounted) Navigator.pop(context);
+    try {
+      final ref = await FirebaseFirestore.instance.collection('chats').add({
+        'name': name,
+        'isGroup': true,
+        'members': [_me, ..._picked],
+        'createdBy': _me,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastTime': FieldValue.serverTimestamp(),
+        'lastText': 'Guruh yaratildi',
+        'lastFrom': '',
+      });
+      if (!mounted) return;
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (_) =>
+                  ChatScreen(chatId: ref.id, title: name, isGroup: true)));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        _snack('Guruh yaratib bo\'lmadi: $e');
+      }
+    }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Yangi guruh')),
-        body: Column(children: [
-          Padding(
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Yangi guruh')),
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: TextField(
+              controller: _name,
+              decoration: const InputDecoration(
+                  labelText: 'Guruh nomi', prefixIcon: Icon(Icons.group))),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: TextField(
+            autocorrect: false,
+            onChanged: (v) => setState(() => _q = v),
+            decoration: const InputDecoration(
+                hintText: "Kontakt yoki @username qidirish",
+                prefixIcon: Icon(Icons.search)),
+          ),
+        ),
+        Expanded(
+          child: ValueListenableBuilder(
+            valueListenable: usersCache,
+            builder: (c, map, _) {
+              final qn = normalizeUsername(_q);
+              final saved = myContacts(_me).where(map.containsKey).toList();
+              final matchSaved = saved.where((id) {
+                if (qn.isEmpty) return true;
+                final u = map[id]!;
+                return ((u['name'] ?? '') as String).toLowerCase().contains(qn) ||
+                    ((u['username'] ?? '') as String).contains(qn);
+              });
+              final found = qn.length >= 2
+                  ? findByUsername(qn, _me).map((e) => e.key)
+                  : <String>[];
+              final ids = <String>[
+                ...matchSaved,
+                ..._picked.where((id) => !saved.contains(id) && map.containsKey(id)),
+                ...found.where((id) => !saved.contains(id) && !_picked.contains(id)),
+              ];
+              if (ids.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Text(
+                      "Kontaktlar yo'q.\nDo'stingizning @username ini qidiruvga yozing.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                );
+              }
+              return ListView(
+                children: [
+                  for (final id in ids)
+                    CheckboxListTile(
+                      secondary: UserAvatar(uid: id, size: 42),
+                      title: Text((map[id]?['name'] ?? '?') as String),
+                      subtitle: ((map[id]?['username'] ?? '') as String).isEmpty
+                          ? null
+                          : Text('@${map[id]!['username']}'),
+                      value: _picked.contains(id),
+                      onChanged: (v) => setState(() {
+                        v == true ? _picked.add(id) : _picked.remove(id);
+                      }),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        SafeArea(
+          child: Padding(
             padding: const EdgeInsets.all(16),
-            child: TextField(
-                controller: _name,
-                decoration: const InputDecoration(
-                    labelText: 'Guruh nomi', prefixIcon: Icon(Icons.group))),
+            child: FilledButton(
+                onPressed: _busy ? null : _create,
+                child: Text(_picked.isEmpty
+                    ? 'Guruh yaratish'
+                    : 'Guruh yaratish (${_picked.length + 1} a\'zo)')),
           ),
-          Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: usersCache,
-              builder: (c, map, _) => ListView(
-                children: map.entries
-                    .where((e) => e.key != _me)
-                    .map((e) => CheckboxListTile(
-                          secondary: UserAvatar(uid: e.key, size: 42),
-                          title: Text((e.value['name'] ?? '?') as String),
-                          value: _picked.contains(e.key),
-                          onChanged: (v) => setState(() {
-                            v == true ? _picked.add(e.key) : _picked.remove(e.key);
-                          }),
-                        ))
-                    .toList(),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                  onPressed: _busy ? null : _create,
-                  child: const Text('Guruh yaratish')),
-            ),
-          ),
-        ]),
-      );
+        ),
+      ]),
+    );
+  }
 }

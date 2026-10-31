@@ -5,14 +5,42 @@ import 'package:flutter/material.dart';
 import 'firebase_config.dart';
 import 'home.dart';
 import 'theme.dart';
+import 'username.dart';
 
 final navKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadPrefs();
+  if (firebaseOptions.apiKey.contains('SHU_YERGA')) {
+    runApp(const _SetupApp());
+    return;
+  }
   await Firebase.initializeApp(options: firebaseOptions);
   runApp(const DjigarlarApp());
+}
+
+class _SetupApp extends StatelessWidget {
+  const _SetupApp();
+  @override
+  Widget build(BuildContext context) => const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  "Firebase sozlanmagan.\n\nlib/firebase_config.dart fayliga Firebase qiymatlarini yozing "
+                  "(yoki GitHub Secrets orqali kiriting) va ilovani qayta yig'ing.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class DjigarlarApp extends StatelessWidget {
@@ -52,6 +80,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _name = TextEditingController();
+  final _username = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
   bool _register = false;
@@ -59,6 +88,13 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _error;
 
   Future<void> _submit() async {
+    if (_register) {
+      final err = validateUsername(_username.text);
+      if (err != null) {
+        setState(() => _error = err);
+        return;
+      }
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -80,6 +116,8 @@ class _AuthScreenState extends State<AuthScreen> {
           'color': accentIndex.value,
           'lastSeen': DateTime.now().millisecondsSinceEpoch,
         });
+        // Band bo'lsa, HomeScreen yangi username so'raydi.
+        await claimUsername(cred.user!.uid, _username.text);
       } else {
         await auth.signInWithEmailAndPassword(
             email: _email.text.trim(), password: _pass.text);
@@ -91,76 +129,125 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  Widget _blob(double size, double o) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+            shape: BoxShape.circle, color: Colors.white.withValues(alpha: o)),
+      );
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [cs.primary.withOpacity(0.18), cs.surface],
-          ),
-        ),
-        child: SafeArea(
+      body: Stack(children: [
+        Container(decoration: BoxDecoration(gradient: headerGradient())),
+        Positioned(top: -80, right: -60, child: _blob(240, 0.12)),
+        Positioned(top: 160, left: -90, child: _blob(180, 0.08)),
+        Positioned(bottom: -110, right: -70, child: _blob(300, 0.10)),
+        SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.all(24),
               child: Column(children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: Image.asset('assets/logo.png', width: 104, height: 104),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10)),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(30),
+                    child: Image.asset('assets/logo.png', width: 96, height: 96),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text('Djigarlar',
                     style: TextStyle(
-                        fontSize: 34,
+                        color: Colors.white,
+                        fontSize: 38,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5)),
                 const SizedBox(height: 4),
-                Text('Do\'stlar bilan yaqin suhbat',
-                    style: TextStyle(color: cs.onSurfaceVariant)),
+                Text("Do'stlar bilan yaqin suhbat",
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85))),
                 const SizedBox(height: 28),
-                if (_register) ...[
-                  TextField(
-                      controller: _name,
-                      decoration: const InputDecoration(
-                          labelText: 'Ism',
-                          prefixIcon: Icon(Icons.person_outline))),
-                  const SizedBox(height: 12),
-                ],
-                TextField(
-                    controller: _email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.mail_outline))),
-                const SizedBox(height: 12),
-                TextField(
-                    controller: _pass,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                        labelText: 'Parol',
-                        prefixIcon: Icon(Icons.lock_outline))),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Text(_error!, style: TextStyle(color: cs.error)),
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          offset: const Offset(0, 12)),
+                    ],
                   ),
-                const SizedBox(height: 20),
-                FilledButton(
-                    onPressed: _busy ? null : _submit,
-                    child: Text(_register ? "Ro'yxatdan o'tish" : 'Kirish')),
-                TextButton(
-                    onPressed: () => setState(() => _register = !_register),
-                    child: Text(
-                        _register ? 'Akkauntim bor' : 'Yangi akkaunt ochish')),
+                  child: Column(children: [
+                    Text(_register ? 'Akkaunt ochish' : 'Xush kelibsiz!',
+                        style: const TextStyle(
+                            fontSize: 22, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 18),
+                    if (_register) ...[
+                      TextField(
+                          controller: _name,
+                          decoration: const InputDecoration(
+                              labelText: 'Ism',
+                              prefixIcon: Icon(Icons.person_outline))),
+                      const SizedBox(height: 12),
+                      TextField(
+                          controller: _username,
+                          autocorrect: false,
+                          decoration: const InputDecoration(
+                              labelText: 'Username',
+                              hintText: 'masalan: ali_01',
+                              prefixIcon: Icon(Icons.alternate_email))),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                        controller: _email,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.mail_outline))),
+                    const SizedBox(height: 12),
+                    TextField(
+                        controller: _pass,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                            labelText: 'Parol',
+                            prefixIcon: Icon(Icons.lock_outline))),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(_error!, style: TextStyle(color: cs.error)),
+                      ),
+                    const SizedBox(height: 20),
+                    FilledButton(
+                        onPressed: _busy ? null : _submit,
+                        child: _busy
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.5))
+                            : Text(_register ? "Ro'yxatdan o'tish" : 'Kirish')),
+                    TextButton(
+                        onPressed: () => setState(() => _register = !_register),
+                        child: Text(_register
+                            ? 'Akkauntim bor'
+                            : 'Yangi akkaunt ochish')),
+                  ]),
+                ),
               ]),
             ),
           ),
         ),
-      ),
+      ]),
     );
   }
 }

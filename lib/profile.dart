@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'theme.dart';
+import 'username.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String me;
@@ -68,13 +69,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-          title: const Text('Profil',
-              style: TextStyle(fontWeight: FontWeight.w700))),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        padding: EdgeInsets.zero,
         children: [
-          Center(
+          Stack(clipBehavior: Clip.none, children: [
+            Container(
+              height: 150,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: headerGradient(),
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(36)),
+              ),
+              child: const SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(24, 14, 24, 0),
+                  child: Text('Profil',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: -56,
+              child: Center(
             child: GestureDetector(
               onTap: _pickPhoto,
               child: Stack(children: [
@@ -101,7 +123,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]),
             ),
           ),
-          const SizedBox(height: 20),
+            ),
+          ]),
+          const SizedBox(height: 64),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          ValueListenableBuilder(
+            valueListenable: usersCache,
+            builder: (c, map, _) {
+              final un = (map[widget.me]?['username'] ?? '') as String;
+              return Card(
+                elevation: 0,
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  leading: const Icon(Icons.alternate_email),
+                  title: Text(un.isEmpty ? "Username yo'q" : '@$un'),
+                  subtitle: const Text("Do'stlar sizni shu orqali topadi"),
+                  trailing: const Icon(Icons.edit_outlined),
+                  onTap: () =>
+                      showUsernameDialog(context, widget.me, current: un),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
           TextField(
               controller: _name,
               decoration: const InputDecoration(
@@ -220,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]),
               const SizedBox(height: 4),
               Text('Hammasi sizga bepul ochiq',
-                  style: TextStyle(color: cs.onPrimary.withOpacity(0.85))),
+                  style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.85))),
               const SizedBox(height: 12),
               for (final f in [
                 'Reaksiyalar (8 xil emoji)',
@@ -262,6 +310,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16))),
           ),
+        ])),
         ],
       ),
     );

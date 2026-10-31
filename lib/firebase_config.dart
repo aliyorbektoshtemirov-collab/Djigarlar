@@ -1,9 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 
-// Firebase loyihasi: djigarlar (Android ilova: uz.djigarlar.djigarlar)
+// Firebase konsolidan (Project settings -> Your apps -> Android) olib shu yerga yozing.
 const firebaseOptions = FirebaseOptions(
-  apiKey: 'AIzaSyA1QbsBy0nhssfI3M9v-NI-BMk1_yiCrNU',
-  appId: '1:187349473371:android:ab3357408d570908ff477e',
-  messagingSenderId: '187349473371',
-  projectId: 'djigarlar',
+  apiKey: 'API_KEY_SHU_YERGA',
+  appId: 'APP_ID_SHU_YERGA',
+  messagingSenderId: 'SENDER_ID_SHU_YERGA',
+  projectId: 'PROJECT_ID_SHU_YERGA',
 );

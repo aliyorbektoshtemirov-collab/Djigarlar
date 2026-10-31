@@ -213,8 +213,19 @@ class _CallScreenState extends State<CallScreen> {
         if (!didPop) _hangup();
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF0B1220),
         body: Stack(children: [
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF134E4A), Color(0xFF1E1B4B), Color(0xFF0B1220)],
+                ),
+              ),
+            ),
+          ),
           if (showRemoteVideo)
             Positioned.fill(
                 child: RTCVideoView(_remoteR,
@@ -222,13 +233,23 @@ class _CallScreenState extends State<CallScreen> {
           else
             Center(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                CircleAvatar(
-                    radius: 54,
+                Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.tealAccent.withValues(alpha: 0.35),
+                            blurRadius: 40,
+                            spreadRadius: 8),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                    radius: 60,
                     child: Text(
                         widget.peerName.isEmpty
                             ? '?'
                             : widget.peerName[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 40))),
+                        style: const TextStyle(fontSize: 44)))),
                 const SizedBox(height: 16),
                 Text(widget.peerName,
                     style: const TextStyle(color: Colors.white, fontSize: 26)),

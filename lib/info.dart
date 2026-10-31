@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'theme.dart';
+import 'username.dart';
 
 class UserProfileScreen extends StatelessWidget {
   final String uid;
@@ -36,16 +37,40 @@ class UserProfileScreen extends StatelessWidget {
                         fontSize: 26, fontWeight: FontWeight.w800)),
               ),
               const SizedBox(height: 4),
+              if (((u['username'] ?? '') as String).isNotEmpty)
+                Center(
+                  child: Text('@${u['username']}',
+                      style: TextStyle(
+                          color: cs.primary, fontWeight: FontWeight.w700)),
+                ),
               Center(
                 child: Text(lastSeenText(u),
                     style: TextStyle(
                         color: isOnline(u) ? cs.primary : cs.onSurfaceVariant)),
               ),
               const SizedBox(height: 24),
+              if (uid != FirebaseAuth.instance.currentUser?.uid)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Builder(builder: (_) {
+                    final me = FirebaseAuth.instance.currentUser!.uid;
+                    final saved = myContacts(me).contains(uid);
+                    return FilledButton.tonalIcon(
+                      onPressed: () =>
+                          saved ? removeContact(me, uid) : addContact(me, uid),
+                      icon: Icon(saved
+                          ? Icons.person_remove_alt_1
+                          : Icons.person_add_alt_1),
+                      label: Text(saved
+                          ? "Kontaktdan o'chirish"
+                          : 'Kontaktlarga saqlash'),
+                    );
+                  }),
+                ),
               if (bio.isNotEmpty)
                 Card(
                   elevation: 0,
-                  color: cs.surfaceContainerHighest.withOpacity(0.6),
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                   child: ListTile(
@@ -56,7 +81,7 @@ class UserProfileScreen extends StatelessWidget {
                 ),
               Card(
                 elevation: 0,
-                color: cs.surfaceContainerHighest.withOpacity(0.6),
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 child: ListTile(

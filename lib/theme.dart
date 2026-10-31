@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const accents = <Color>[
-  Color(0xFF0F9D8A),
+  Color(0xFF0FA68F),
   Color(0xFF5B6CFF),
-  Color(0xFFE1306C),
+  Color(0xFFE63E7B),
   Color(0xFFFF8A3D),
-  Color(0xFF8E44AD),
-  Color(0xFF2E86DE),
-  Color(0xFF16A34A),
+  Color(0xFF9B51E0),
+  Color(0xFF2E8BEA),
+  Color(0xFF22B36B),
   Color(0xFFEF4444),
 ];
 
@@ -27,6 +27,10 @@ const List<List<Color>?> wallpapers = [
   [Color(0xFFE3F2FD), Color(0xFFEDE7F6)],
   [Color(0xFF0F2027), Color(0xFF2C5364)],
   [Color(0xFF1A1A2E), Color(0xFF3D1E6D)],
+  [Color(0xFFFFF4E0), Color(0xFFFFE0F0)],
+  [Color(0xFFE8F5E9), Color(0xFFE0F7FA)],
+  [Color(0xFF232526), Color(0xFF414345)],
+  [Color(0xFF141E30), Color(0xFF243B55)],
 ];
 
 String pairId(String a, String b) => ([a, b]..sort()).join('_');
@@ -56,39 +60,157 @@ Future<void> saveMode(ThemeMode m) async {
   (await SharedPreferences.getInstance()).setInt('mode', m.index);
 }
 
+LinearGradient headerGradient() {
+  final seed = accents[accentIndex.value];
+  return LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color.lerp(seed, Colors.white, 0.12)!,
+      seed,
+      Color.lerp(seed, const Color(0xFF3B2A8C), 0.55)!,
+    ],
+  );
+}
+
 ThemeData buildTheme(Color seed, Brightness b) {
-  final cs = ColorScheme.fromSeed(seedColor: seed, brightness: b);
+  final light = b == Brightness.light;
+  final base = ColorScheme.fromSeed(seedColor: seed, brightness: b);
+  final cs = light
+      ? base
+      : base.copyWith(
+          surface: Color.alphaBlend(
+              seed.withValues(alpha: 0.05), const Color(0xFF0F1115)),
+          surfaceContainerLow: Color.alphaBlend(
+              seed.withValues(alpha: 0.06), const Color(0xFF171A20)),
+          surfaceContainerHigh: Color.alphaBlend(
+              seed.withValues(alpha: 0.07), const Color(0xFF20242B)),
+        );
+  final bg = light
+      ? Color.alphaBlend(seed.withValues(alpha: 0.05), const Color(0xFFF6F7FB))
+      : cs.surface;
+  final panel = light ? Colors.white : cs.surfaceContainerLow;
   return ThemeData(
     useMaterial3: true,
     colorScheme: cs,
-    scaffoldBackgroundColor: b == Brightness.light
-        ? Color.alphaBlend(cs.primary.withOpacity(0.04), Colors.white)
-        : cs.surface,
+    scaffoldBackgroundColor: bg,
+    splashFactory: InkSparkle.splashFactory,
+    pageTransitionsTheme: const PageTransitionsTheme(builders: {
+      TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+    }),
     appBarTheme: AppBarTheme(
-      backgroundColor: cs.surface,
+      backgroundColor: bg,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+          color: cs.onSurface,
+          fontSize: 21,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3),
+    ),
+    dividerTheme: DividerThemeData(
+        space: 1,
+        thickness: 0.6,
+        color: cs.outlineVariant.withValues(alpha: 0.5)),
+    listTileTheme: ListTileThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: cs.surfaceContainerHighest.withOpacity(0.6),
+      fillColor: light
+          ? Colors.white
+          : cs.surfaceContainerHighest.withValues(alpha: 0.6),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide:
+              BorderSide(color: cs.primary.withValues(alpha: 0.7), width: 1.5)),
+      hintStyle: TextStyle(color: cs.onSurface.withValues(alpha: 0.45)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        minimumSize: const Size.fromHeight(54),
+        elevation: 0,
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: cs.surface,
+      backgroundColor: panel,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      height: 68,
       indicatorColor: cs.primaryContainer,
+      indicatorShape: const StadiumBorder(),
+      labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: light ? Colors.white : cs.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: light ? Colors.white : cs.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: light ? Colors.white : cs.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    chipTheme: ChipThemeData(
+      shape: const StadiumBorder(),
+      side: BorderSide.none,
+      backgroundColor: light ? Colors.white : cs.surfaceContainerHigh,
+      selectedColor: cs.primaryContainer,
+      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
     ),
   );
+}
+
+/// Yumshoq yumaloq karta (ro'yxat elementlari uchun).
+class SoftCard extends StatelessWidget {
+  final Widget child;
+  const SoftCard({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final light = Theme.of(context).brightness == Brightness.light;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Material(
+        color: light ? Colors.white : cs.surfaceContainerLow,
+        elevation: light ? 2 : 0,
+        shadowColor: cs.primary.withValues(alpha: 0.14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(
+              color: light
+                  ? Colors.transparent
+                  : cs.outlineVariant.withValues(alpha: 0.25)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: child,
+      ),
+    );
+  }
 }
 
 // ---------- yordamchi funksiyalar ----------
@@ -155,7 +277,10 @@ class Avatar extends StatelessWidget {
           gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [base, Color.lerp(base, Colors.black, 0.25)!]),
+              colors: [
+                Color.lerp(base, Colors.white, 0.18)!,
+                Color.lerp(base, Colors.black, 0.28)!
+              ]),
         ),
         alignment: Alignment.center,
         child: group
@@ -228,7 +353,7 @@ InlineSpan formatText(String s, TextStyle base) {
           text: m.group(3),
           style: TextStyle(
               fontFamily: 'monospace',
-              backgroundColor: (base.color ?? Colors.grey).withOpacity(0.15))));
+              backgroundColor: (base.color ?? Colors.grey).withValues(alpha: 0.15))));
     } else {
       spans.add(TextSpan(
           text: m.group(4),

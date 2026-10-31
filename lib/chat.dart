@@ -648,7 +648,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Container(
                   height: 5,
                   decoration: BoxDecoration(
-                      color: textColor.withOpacity(0.18),
+                      color: textColor.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(3)),
                   alignment: Alignment.centerLeft,
                   child: FractionallySizedBox(
@@ -664,7 +664,7 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }),
       Text('$total ovoz',
-          style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
+          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7))),
     ]);
   }
 
@@ -694,7 +694,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 style: TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: textColor.withOpacity(0.8))),
+                    color: textColor.withValues(alpha: 0.8))),
           ),
         if (widget.isGroup && !mine)
           Padding(
@@ -710,7 +710,7 @@ class _ChatScreenState extends State<ChatScreen> {
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             decoration: BoxDecoration(
-              color: textColor.withOpacity(0.12),
+              color: textColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
               border: Border(
                   left: BorderSide(
@@ -758,21 +758,21 @@ class _ChatScreenState extends State<ChatScreen> {
           alignment: Alignment.centerRight,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (isPinned)
-              Icon(Icons.push_pin, size: 11, color: textColor.withOpacity(0.7)),
+              Icon(Icons.push_pin, size: 11, color: textColor.withValues(alpha: 0.7)),
             if (m['edited'] == true)
               Text(' tahrirlangan ',
                   style: TextStyle(
-                      fontSize: 10, color: textColor.withOpacity(0.7))),
+                      fontSize: 10, color: textColor.withValues(alpha: 0.7))),
             Text(time == null ? '' : ' ${fmtTime(time)}',
                 style:
-                    TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
+                    TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7))),
             if (mine && !widget.isGroup && !widget.saved) ...[
               const SizedBox(width: 3),
               Icon(read ? Icons.done_all : Icons.done,
                   size: 15,
                   color: read
                       ? const Color(0xFF9BE7FF)
-                      : textColor.withOpacity(0.7)),
+                      : textColor.withValues(alpha: 0.7)),
             ],
           ]),
         ),
@@ -789,12 +789,22 @@ class _ChatScreenState extends State<ChatScreen> {
                   Color.lerp(cs.primary, cs.tertiary, 0.35)!
                 ])
               : null,
-          color: mine ? null : cs.surfaceContainerHighest,
+          color: mine
+              ? null
+              : (Theme.of(context).brightness == Brightness.light
+                  ? Colors.white
+                  : cs.surfaceContainerHighest),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(18),
-            topRight: const Radius.circular(18),
-            bottomLeft: Radius.circular(mine ? 18 : 4),
-            bottomRight: Radius.circular(mine ? 4 : 18),
+            topLeft: const Radius.circular(20),
+            topRight: const Radius.circular(20),
+            bottomLeft: Radius.circular(mine ? 20 : 5),
+            bottomRight: Radius.circular(mine ? 5 : 20),
           ),
         ),
         child: fixed ? SizedBox(width: 250, child: col) : IntrinsicWidth(child: col),
@@ -897,41 +907,109 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     }
     final hasText = _text.text.trim().isNotEmpty || _editingId != null;
-    return Container(
-      color: cs.surface,
-      padding: const EdgeInsets.fromLTRB(6, 6, 8, 8),
+    final light = Theme.of(context).brightness == Brightness.light;
+    final icon = _editingId != null
+        ? Icons.check
+        : hasText
+            ? Icons.send
+            : Icons.mic;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
       child: SafeArea(
         top: false,
         child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          IconButton(
-              icon: const Icon(Icons.emoji_emotions_outlined),
-              onPressed: _openStickers),
           Expanded(
-            child: TextField(
-              controller: _text,
-              onChanged: _onChanged,
-              minLines: 1,
-              maxLines: 5,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(hintText: 'Xabar'),
+            child: Container(
+              decoration: BoxDecoration(
+                color: light ? Colors.white : cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(26),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                IconButton(
+                    icon: const Icon(Icons.emoji_emotions_outlined),
+                    onPressed: _openStickers),
+                Expanded(
+                  child: TextField(
+                    controller: _text,
+                    onChanged: _onChanged,
+                    minLines: 1,
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                        hintText: 'Xabar',
+                        filled: false,
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14)),
+                  ),
+                ),
+                IconButton(
+                    icon: const Icon(Icons.attach_file), onPressed: _attachMenu),
+              ]),
             ),
           ),
-          IconButton(icon: const Icon(Icons.attach_file), onPressed: _attachMenu),
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: cs.primary,
-            child: IconButton(
-              icon: Icon(
-                  _editingId != null
-                      ? Icons.check
-                      : hasText
-                          ? Icons.send
-                          : Icons.mic,
-                  color: cs.onPrimary),
-              onPressed: hasText ? _send : _startRec,
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: hasText ? _send : _startRec,
+            child: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [
+                  cs.primary,
+                  Color.lerp(cs.primary, cs.tertiary, 0.5)!
+                ]),
+                boxShadow: [
+                  BoxShadow(
+                      color: cs.primary.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3)),
+                ],
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: Icon(icon, key: ValueKey(icon), color: cs.onPrimary),
+              ),
             ),
           ),
         ]),
+      ),
+    );
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Widget _dayChip(DateTime d) {
+    final cs = Theme.of(context).colorScheme;
+    final n = DateTime.now();
+    String label;
+    if (_sameDay(d, n)) {
+      label = 'Bugun';
+    } else if (_sameDay(d, n.subtract(const Duration(days: 1)))) {
+      label = 'Kecha';
+    } else {
+      label = '${two(d.day)}.${two(d.month)}.${d.year}';
+    }
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant)),
       ),
     );
   }
@@ -1128,8 +1206,18 @@ class _ChatScreenState extends State<ChatScreen> {
                               peerRead != null &&
                               time != null &&
                               !time.isAfter(peerRead.toDate());
-                          return _bubble(docs[i].id, m, mine, time, read,
-                              docs[i].id == pinnedId);
+                          final bubble = _bubble(docs[i].id, m, mine, time,
+                              read, docs[i].id == pinnedId);
+                          final older = i + 1 < docs.length
+                              ? (docs[i + 1].data()['time'] as Timestamp?)
+                                  ?.toDate()
+                              : null;
+                          final showDay = time != null &&
+                              (older == null || !_sameDay(time, older));
+                          if (!showDay) return bubble;
+                          return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [_dayChip(time), bubble]);
                         },
                       );
                     },
@@ -1234,7 +1322,7 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
         child: Container(
           height: 4,
           decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.25),
+              color: widget.color.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(2)),
           alignment: Alignment.centerLeft,
           child: FractionallySizedBox(
