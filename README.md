@@ -2,6 +2,22 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
+## v0.7.0
+- Username: ro'yxatdan o'tishda tanlanadi (noyob, a-z 0-9 _), profilda o'zgartiriladi. Username'i yo'q eski foydalanuvchilarga kirganda so'raladi
+- Qidiruv: chatlar va kontaktlar qidiruvida ism yoki @username yozilsa, odam topiladi (suhbat hali bo'lmasa ham)
+- Kontaktlar: topilgan odamni saqlash (+), kontaktlar ro'yxati faqat saqlanganlardan iborat, profildan saqlash/o'chirish
+- Guruh: a'zolar kontaktlardan yoki @username qidirib tanlanadi, yaratilgach guruh chati darrov ochiladi
+- firestore.rules yangilandi (`usernames` to'plami): Rules bo'limiga qayta qo'ying!
+
+## v0.6.4
+- Yangi dizayn: yanada jonli ranglar, chuqur qorong'i rejim, yumshoq soyali kartalar, yumaloq dialog va menyular, iOS uslubidagi sahifa o'tishlari (chetdan surib orqaga qaytish), 3 rangli gradient sarlavha, yangi 4 ta chat foni
+
+## v0.6.3
+- Build tuzatishlari: plaginlar uchun compileSdk 36, `record_linux` mosligi, logotip fayllari yo'q bo'lsa ham build o'tadi
+- Firebase sozlanmagan bo'lsa ilova yiqilmaydi, tushuntirish ekrani ko'rsatadi
+- Firebase qiymatlarini GitHub Secrets orqali berish mumkin (kodga yozmasdan)
+- Eskirgan `withOpacity` o'rniga `withValues`; workflow: kesh, taymaut, takroriy ishga tushishni bekor qilish
+
 ## v0.6.2
 - Pastki panel iOS Telegram uslubida: tekis panel, to'ldirilgan/konturli ikonkalar, bounce animatsiya, tebranish, o'qilmagan xabarlar nishoni, sahifalar orasida silliq o'tish
 
@@ -38,7 +54,9 @@ Android uchun shaxsiy messenger (Flutter + Firebase).
 1. console.firebase.google.com da loyiha oching, Android ilova qo'shing (package: `uz.djigarlar.djigarlar`).
 2. Authentication -> Email/Password ni yoqing.
 3. Firestore Database yarating, so'ng Rules bo'limiga `firestore.rules` faylidagi matnni qo'ying va Publish bosing (har yangilanishda qayta qo'ying).
-4. `lib/firebase_config.dart` ga 4 ta qiymatni yozing.
+4. Firebase qiymatlarini kiriting (ikki yo'ldan biri):
+   - `lib/firebase_config.dart` ga 4 ta qiymatni yozing, yoki
+   - GitHub -> Settings -> Secrets and variables -> Actions da `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, `FIREBASE_SENDER_ID`, `FIREBASE_PROJECT_ID` nomli 4 ta secret yarating (build paytida avtomatik yoziladi).
 5. `git push` qiling, GitHub -> Actions -> Build APK -> Artifacts dan `djigarlar-apk` ni yuklab oling.
 
 ## Cheklovlar

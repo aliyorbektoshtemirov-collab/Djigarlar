@@ -5,14 +5,42 @@ import 'package:flutter/material.dart';
 import 'firebase_config.dart';
 import 'home.dart';
 import 'theme.dart';
+import 'username.dart';
 
 final navKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadPrefs();
+  if (firebaseOptions.apiKey.contains('SHU_YERGA')) {
+    runApp(const _SetupApp());
+    return;
+  }
   await Firebase.initializeApp(options: firebaseOptions);
   runApp(const DjigarlarApp());
+}
+
+class _SetupApp extends StatelessWidget {
+  const _SetupApp();
+  @override
+  Widget build(BuildContext context) => const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  "Firebase sozlanmagan.\n\nlib/firebase_config.dart fayliga Firebase qiymatlarini yozing "
+                  "(yoki GitHub Secrets orqali kiriting) va ilovani qayta yig'ing.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class DjigarlarApp extends StatelessWidget {
@@ -52,6 +80,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _name = TextEditingController();
+  final _username = TextEditingController();
   final _email = TextEditingController();
   final _pass = TextEditingController();
   bool _register = false;
@@ -59,6 +88,13 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _error;
 
   Future<void> _submit() async {
+    if (_register) {
+      final err = validateUsername(_username.text);
+      if (err != null) {
+        setState(() => _error = err);
+        return;
+      }
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -80,6 +116,8 @@ class _AuthScreenState extends State<AuthScreen> {
           'color': accentIndex.value,
           'lastSeen': DateTime.now().millisecondsSinceEpoch,
         });
+        // Band bo'lsa, HomeScreen yangi username so'raydi.
+        await claimUsername(cred.user!.uid, _username.text);
       } else {
         await auth.signInWithEmailAndPassword(
             email: _email.text.trim(), password: _pass.text);
@@ -95,7 +133,7 @@ class _AuthScreenState extends State<AuthScreen> {
         width: size,
         height: size,
         decoration: BoxDecoration(
-            shape: BoxShape.circle, color: Colors.white.withOpacity(o)),
+            shape: BoxShape.circle, color: Colors.white.withValues(alpha: o)),
       );
 
   @override
@@ -117,7 +155,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.25),
+                          color: Colors.black.withValues(alpha: 0.25),
                           blurRadius: 24,
                           offset: const Offset(0, 10)),
                     ],
@@ -136,7 +174,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         letterSpacing: 0.5)),
                 const SizedBox(height: 4),
                 Text("Do'stlar bilan yaqin suhbat",
-                    style: TextStyle(color: Colors.white.withOpacity(0.85))),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.85))),
                 const SizedBox(height: 28),
                 Container(
                   padding: const EdgeInsets.all(22),
@@ -145,7 +183,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 30,
                           offset: const Offset(0, 12)),
                     ],
@@ -161,6 +199,14 @@ class _AuthScreenState extends State<AuthScreen> {
                           decoration: const InputDecoration(
                               labelText: 'Ism',
                               prefixIcon: Icon(Icons.person_outline))),
+                      const SizedBox(height: 12),
+                      TextField(
+                          controller: _username,
+                          autocorrect: false,
+                          decoration: const InputDecoration(
+                              labelText: 'Username',
+                              hintText: 'masalan: ali_01',
+                              prefixIcon: Icon(Icons.alternate_email))),
                       const SizedBox(height: 12),
                     ],
                     TextField(

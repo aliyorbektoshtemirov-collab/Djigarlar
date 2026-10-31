@@ -4,20 +4,33 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
+
       - name: Android platform papkasini yaratish
         run: flutter create --platforms=android --org uz.djigarlar --project-name djigarlar .
+
       - name: Ruxsatlar, nom va minSdk
         run: |
           python3 - <<'PY'
@@ -35,11 +48,64 @@ jobs:
               t = t.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 24')
               open(g, 'w').write(t)
           PY
+
+      - name: Plaginlar uchun compileSdk ni 36 ga ko'tarish
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/compilesdk.gradle <<'EOF'
+          allprojects {
+            afterEvaluate { p ->
+              if (p.hasProperty('android')) {
+                def cur = p.android.compileSdk
+                if (cur == null || cur < 36) {
+                  p.android.compileSdk = 36
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Firebase sozlamalarini Secrets dan yozish (ixtiyoriy)
+        env:
+          FB_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FB_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FB_SENDER_ID: ${{ secrets.FIREBASE_SENDER_ID }}
+          FB_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$FB_API_KEY" ] && [ -n "$FB_APP_ID" ] && [ -n "$FB_SENDER_ID" ] && [ -n "$FB_PROJECT_ID" ]; then
+            cat > lib/firebase_config.dart <<EOF
+          import 'package:firebase_core/firebase_core.dart';
+
+          const firebaseOptions = FirebaseOptions(
+            apiKey: '$FB_API_KEY',
+            appId: '$FB_APP_ID',
+            messagingSenderId: '$FB_SENDER_ID',
+            projectId: '$FB_PROJECT_ID',
+          );
+          EOF
+            echo "firebase_config.dart Secrets dan yozildi"
+          else
+            echo "Secrets topilmadi - lib/firebase_config.dart dagi qiymatlar ishlatiladi"
+          fi
+
       - run: flutter pub get
+
       - name: Logotipni o'rnatish
-        run: dart run flutter_launcher_icons
+        run: |
+          if [ ! -f assets/logo_bg.png ]; then
+            echo "assets/logo_bg.png topilmadi - rang ishlatiladi"
+            sed -i 's|adaptive_icon_background: .*|adaptive_icon_background: "#0F9D8A"|' pubspec.yaml
+          fi
+          if [ ! -f assets/logo_fg.png ]; then
+            echo "assets/logo_fg.png topilmadi - logo.png ishlatiladi"
+            sed -i 's|adaptive_icon_foreground: .*|adaptive_icon_foreground: "assets/logo.png"|' pubspec.yaml
+          fi
+          dart run flutter_launcher_icons
+
       - run: flutter build apk --release
+
       - uses: actions/upload-artifact@v4
         with:
           name: djigarlar-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error

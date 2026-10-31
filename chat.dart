@@ -648,7 +648,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 Container(
                   height: 5,
                   decoration: BoxDecoration(
-                      color: textColor.withOpacity(0.18),
+                      color: textColor.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(3)),
                   alignment: Alignment.centerLeft,
                   child: FractionallySizedBox(
@@ -664,7 +664,7 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }),
       Text('$total ovoz',
-          style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
+          style: TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7))),
     ]);
   }
 
@@ -694,7 +694,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 style: TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
-                    color: textColor.withOpacity(0.8))),
+                    color: textColor.withValues(alpha: 0.8))),
           ),
         if (widget.isGroup && !mine)
           Padding(
@@ -710,7 +710,7 @@ class _ChatScreenState extends State<ChatScreen> {
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
             decoration: BoxDecoration(
-              color: textColor.withOpacity(0.12),
+              color: textColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
               border: Border(
                   left: BorderSide(
@@ -758,21 +758,21 @@ class _ChatScreenState extends State<ChatScreen> {
           alignment: Alignment.centerRight,
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (isPinned)
-              Icon(Icons.push_pin, size: 11, color: textColor.withOpacity(0.7)),
+              Icon(Icons.push_pin, size: 11, color: textColor.withValues(alpha: 0.7)),
             if (m['edited'] == true)
               Text(' tahrirlangan ',
                   style: TextStyle(
-                      fontSize: 10, color: textColor.withOpacity(0.7))),
+                      fontSize: 10, color: textColor.withValues(alpha: 0.7))),
             Text(time == null ? '' : ' ${fmtTime(time)}',
                 style:
-                    TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
+                    TextStyle(fontSize: 11, color: textColor.withValues(alpha: 0.7))),
             if (mine && !widget.isGroup && !widget.saved) ...[
               const SizedBox(width: 3),
               Icon(read ? Icons.done_all : Icons.done,
                   size: 15,
                   color: read
                       ? const Color(0xFF9BE7FF)
-                      : textColor.withOpacity(0.7)),
+                      : textColor.withValues(alpha: 0.7)),
             ],
           ]),
         ),
@@ -796,7 +796,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   : cs.surfaceContainerHighest),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.07),
+                color: Colors.black.withValues(alpha: 0.07),
                 blurRadius: 6,
                 offset: const Offset(0, 2)),
           ],
@@ -925,7 +925,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 borderRadius: BorderRadius.circular(26),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 2)),
                 ],
@@ -967,7 +967,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ]),
                 boxShadow: [
                   BoxShadow(
-                      color: cs.primary.withOpacity(0.35),
+                      color: cs.primary.withValues(alpha: 0.35),
                       blurRadius: 10,
                       offset: const Offset(0, 3)),
                 ],
@@ -1002,7 +1002,7 @@ class _ChatScreenState extends State<ChatScreen> {
         margin: const EdgeInsets.symmetric(vertical: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh.withOpacity(0.9),
+          color: cs.surfaceContainerHigh.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Text(label,
@@ -1322,7 +1322,7 @@ class _VoiceBubbleState extends State<_VoiceBubble> {
         child: Container(
           height: 4,
           decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.25),
+              color: widget.color.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(2)),
           alignment: Alignment.centerLeft,
           child: FractionallySizedBox(

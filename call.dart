@@ -238,7 +238,7 @@ class _CallScreenState extends State<CallScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.tealAccent.withOpacity(0.35),
+                            color: Colors.tealAccent.withValues(alpha: 0.35),
                             blurRadius: 40,
                             spreadRadius: 8),
                       ],

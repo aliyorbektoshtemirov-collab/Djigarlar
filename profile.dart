@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'theme.dart';
+import 'username.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String me;
@@ -128,6 +129,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          ValueListenableBuilder(
+            valueListenable: usersCache,
+            builder: (c, map, _) {
+              final un = (map[widget.me]?['username'] ?? '') as String;
+              return Card(
+                elevation: 0,
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  leading: const Icon(Icons.alternate_email),
+                  title: Text(un.isEmpty ? "Username yo'q" : '@$un'),
+                  subtitle: const Text("Do'stlar sizni shu orqali topadi"),
+                  trailing: const Icon(Icons.edit_outlined),
+                  onTap: () =>
+                      showUsernameDialog(context, widget.me, current: un),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
           TextField(
               controller: _name,
               decoration: const InputDecoration(
@@ -246,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]),
               const SizedBox(height: 4),
               Text('Hammasi sizga bepul ochiq',
-                  style: TextStyle(color: cs.onPrimary.withOpacity(0.85))),
+                  style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.85))),
               const SizedBox(height: 12),
               for (final f in [
                 'Reaksiyalar (8 xil emoji)',
