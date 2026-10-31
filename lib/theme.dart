@@ -95,10 +95,6 @@ ThemeData buildTheme(Color seed, Brightness b) {
     colorScheme: cs,
     scaffoldBackgroundColor: bg,
     splashFactory: InkSparkle.splashFactory,
-    pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-    }),
     appBarTheme: AppBarTheme(
       backgroundColor: bg,
       surfaceTintColor: Colors.transparent,

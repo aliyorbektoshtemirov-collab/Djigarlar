@@ -10,7 +10,7 @@ Android uchun shaxsiy messenger (Flutter + Firebase).
 - firestore.rules yangilandi (`usernames` to'plami): Rules bo'limiga qayta qo'ying!
 
 ## v0.6.4
-- Yangi dizayn: yanada jonli ranglar, chuqur qorong'i rejim, yumshoq soyali kartalar, yumaloq dialog va menyular, iOS uslubidagi sahifa o'tishlari (chetdan surib orqaga qaytish), 3 rangli gradient sarlavha, yangi 4 ta chat foni
+- Yangi dizayn: yanada jonli ranglar, chuqur qorong'i rejim, yumshoq soyali kartalar, yumaloq dialog va menyular, 3 rangli gradient sarlavha, yangi 4 ta chat foni
 
 ## v0.6.3
 - Build tuzatishlari: plaginlar uchun compileSdk 36, `record_linux` mosligi, logotip fayllari yo'q bo'lsa ham build o'tadi
