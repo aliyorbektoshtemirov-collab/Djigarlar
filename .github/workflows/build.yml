@@ -1,0 +1,45 @@
+name: Build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Android platform papkasini yaratish
+        run: flutter create --platforms=android --org uz.djigarlar --project-name djigarlar .
+      - name: Ruxsatlar, nom va minSdk
+        run: |
+          python3 - <<'PY'
+          import re, glob
+          p = 'android/app/src/main/AndroidManifest.xml'
+          s = open(p).read()
+          names = ['INTERNET','CAMERA','RECORD_AUDIO','MODIFY_AUDIO_SETTINGS','ACCESS_NETWORK_STATE','CHANGE_NETWORK_STATE','BLUETOOTH','BLUETOOTH_CONNECT','WAKE_LOCK']
+          perms = ''.join('\n    <uses-permission android:name="android.permission.%s"/>' % n for n in names)
+          s = re.sub(r'(<manifest[^>]*>)', lambda m: m.group(1) + perms, s, count=1)
+          s = re.sub(r'android:label="[^"]*"', 'android:label="Djigarlar"', s)
+          open(p, 'w').write(s)
+          for g in glob.glob('android/app/build.gradle*'):
+              t = open(g).read()
+              t = t.replace('minSdk = flutter.minSdkVersion', 'minSdk = 24')
+              t = t.replace('minSdkVersion flutter.minSdkVersion', 'minSdkVersion 24')
+              open(g, 'w').write(t)
+          PY
+      - run: flutter pub get
+      - name: Logotipni o'rnatish
+        run: dart run flutter_launcher_icons
+      - run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: djigarlar-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
