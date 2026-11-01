@@ -1,7 +1,7 @@
 name: djigarlar
 description: Djigarlar - messenger (Android)
 publish_to: none
-version: 0.8.3+17
+version: 0.8.4+18
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -30,6 +30,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: false
+  remove_alpha_ios: true
   image_path: "assets/logo.png"
   adaptive_icon_background: "assets/logo_bg.png"
   adaptive_icon_foreground: "assets/logo_fg.png"

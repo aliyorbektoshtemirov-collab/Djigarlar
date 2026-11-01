@@ -367,7 +367,11 @@ class _CallScreenState extends State<CallScreen> {
   void _close() {
     if (_closing) return;
     _closing = true;
-    if (mounted) Navigator.of(context).maybePop();
+    // DIQQAT: PopScope(canPop: false) bo'lgani uchun maybePop() ISHLAMAYDI —
+    // u canPop'ni so'raydi va rad etiladi. Shuning uchun to'g'ridan-to'g'ri pop().
+    if (!mounted) return;
+    final nav = Navigator.of(context);
+    if (nav.canPop()) nav.pop();
   }
 
   @override
@@ -408,7 +412,11 @@ class _CallScreenState extends State<CallScreen> {
         backgroundColor: callBg,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => _set(() => _controls = !_controls),
+          // Faqat video ko'rinayotganda tugmalarni yashirish mumkin —
+          // audio qo'ng'iroqda qizil tugma doim ko'rinib tursin.
+          onTap: hasRemoteVideo
+              ? () => _set(() => _controls = !_controls)
+              : null,
           child: Stack(fit: StackFit.expand, children: [
             const Positioned.fill(child: CallBackdrop()),
 

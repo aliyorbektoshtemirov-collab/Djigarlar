@@ -2,6 +2,37 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
+## v0.8.4 — qo'ng'iroq va iPhone (IPA)
+
+- **Qo'ng'iroq avtomatik yopilmas edi**: `maybePop()` ishlatilgan, lekin ekranda
+  `PopScope(canPop: false)` turadi (orqaga tugmasi qo'ng'iroqni tasodifan yopmasligi uchun).
+  `maybePop()` avval ruxsat so'raydi va rad etiladi — shuning uchun ekran yopilmagan.
+  Endi to'g'ridan-to'g'ri `pop()`. Guruh qo'ng'irog'ida ham shu xato tuzatildi
+- Pastki panelda endi faqat ikonkalar
+- Ekranga bosganda tugmalarni yashirish faqat video ko'rinayotganda ishlaydi
+  (audio qo'ng'iroqda qizil tugma doim ko'rinadi)
+
+### iPhone uchun (Scarlet / Feather / Sideloadly)
+
+`.github/workflows/ios.yml` — **imzosiz IPA** yasaydi.
+
+1. Actions -> "Build IPA (imzosiz)" -> **Run workflow**
+2. Tugagach Artifacts dan `djigarlar-ipa` ni yuklab oling
+3. `Djigarlar.ipa` ni Scarlet yoki Feather orqali o'rnating (ular o'zi qayta imzolaydi)
+
+**Firebase'ni iOS uchun sozlash shart** (aks holda ilova "Firebase sozlanmagan" ekranini
+ko'rsatadi):
+
+1. Firebase Console -> loyiha sozlamalari -> "Ilova qo'shish" -> **iOS**
+2. Bundle ID: `uz.djigarlar.djigarlar`
+3. `GoogleService-Info.plist` dan ikkita qiymatni oling:
+   - `API_KEY` va `GOOGLE_APP_ID` (`1:187349473371:ios:...`)
+4. Ularni `lib/firebase_config.dart` dagi `_ios` ichiga yozing,
+   yoki GitHub Secrets'ga `IOS_FIREBASE_API_KEY` va `IOS_FIREBASE_APP_ID` nomi bilan qo'shing
+
+iOS'da ham: kamera, mikrofon, galereya ruxsatlari va bildirishnomalar sozlangan;
+fon rejimida ovoz uchun `UIBackgroundModes: audio` yoqilgan; minimal iOS 15.
+
 ## v0.8.3 — build tuzatildi (desugaring)
 
 `flutter_local_notifications` plagini Android'da "core library desugaring" ni talab qiladi.

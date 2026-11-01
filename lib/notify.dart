@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // ============================================================================
@@ -22,7 +23,12 @@ class Notifier {
     if (_ready) return;
     try {
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const settings = InitializationSettings(android: android);
+      const darwin = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+      const settings = InitializationSettings(android: android, iOS: darwin);
       await _p.initialize(
         settings,
         onDidReceiveNotificationResponse: (r) {
@@ -54,11 +60,20 @@ class Notifier {
   Future<bool> ask() async {
     await init();
     try {
-      final a = _p.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      if (a == null) return false;
-      final ok = await a.requestNotificationsPermission();
-      granted = ok ?? false;
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final i = _p.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+        granted = await i?.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            ) ??
+            false;
+      } else {
+        final a = _p.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        granted = await a?.requestNotificationsPermission() ?? false;
+      }
     } catch (_) {
       granted = false;
     }
@@ -85,6 +100,11 @@ class Notifier {
             importance: Importance.high,
             priority: Priority.high,
             ticker: 'yangi xabar',
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
           ),
         ),
         payload: chatId,
@@ -115,6 +135,11 @@ class Notifier {
             ongoing: true,
             autoCancel: false,
             ticker: "qo'ng'iroq",
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
           ),
         ),
       );

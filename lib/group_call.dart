@@ -383,7 +383,12 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     if (_closing) return;
     _closing = true;
     HapticFeedback.mediumImpact();
-    if (mounted) Navigator.of(context).maybePop();
+    // DIQQAT: PopScope(canPop: false) bo'lgani uchun maybePop() ISHLAMAYDI —
+    // u canPop'ni so'raydi va rad etiladi. Shuning uchun to'g'ridan-to'g'ri pop().
+    if (mounted) {
+      final nav = Navigator.of(context);
+      if (nav.canPop()) nav.pop();
+    }
     try {
       await _members.doc(_me).delete();
       final rest = await _members.get();
@@ -442,7 +447,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         backgroundColor: callBg,
         body: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => _set(() => _controls = !_controls),
+          onTap: widget.video
+              ? () => _set(() => _controls = !_controls)
+              : null,
           child: Stack(fit: StackFit.expand, children: [
             const Positioned.fill(child: CallBackdrop()),
             Positioned.fill(

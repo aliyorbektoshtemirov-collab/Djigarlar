@@ -551,17 +551,12 @@ class DjTabBar extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeOutCubic,
-            padding: EdgeInsets.symmetric(
-                horizontal: sel ? 15 : 10, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: sel ? p.ink : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 240),
-              curve: Curves.easeOutCubic,
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Stack(clipBehavior: Clip.none, children: [
+            child: Stack(clipBehavior: Clip.none, children: [
                   Icon(
                     sel ? t.filled : t.outline,
                     size: 21,
@@ -599,21 +594,7 @@ class DjTabBar extends StatelessWidget {
                         ),
                       ),
                     ),
-                ]),
-                if (sel) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    t.label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                      color: p.inkOn,
-                    ),
-                  ),
-                ],
-              ]),
-            ),
+            ]),
           ),
         ),
       ),
