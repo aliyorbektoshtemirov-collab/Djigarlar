@@ -501,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 14),
             Center(
-              child: Text('Djigarlar v0.8.2',
+              child: Text('Djigarlar v0.8.3',
                   style: TextStyle(color: p.faint, fontSize: 11.5)),
             ),
           ],

@@ -2,6 +2,18 @@
 
 Android uchun shaxsiy messenger (Flutter + Firebase).
 
+## v0.8.3 — build tuzatildi (desugaring)
+
+`flutter_local_notifications` plagini Android'da "core library desugaring" ni talab qiladi.
+Avval buni CI workflow'ida yoqmoqchi bo'ldim, lekin `.github/` yashirin papka bo'lgani uchun
+u yangilanmay qolishi mumkin. Endi sozlama **repozitoriyning o'zida**:
+
+- `android/app/build.gradle.kts` — endi repoda saqlanadi.
+  `flutter create` mavjud fayllarni qayta yozmaydi, shuning uchun bu sozlama CI'da ham saqlanadi.
+- `.gitignore` yangilandi: `android/` papkasi hamon e'tiborsiz, lekin shu bitta fayl saqlanadi.
+
+Agar fayl git'ga tushmasa: `git add -f android/app/build.gradle.kts`
+
 ## v0.8.1 — laglar, qo'ng'iroq ekrani va bildirishnomalar
 
 - **Qo'ng'iroq ekrani buzilgan edi**: `Stack` o'z balandligini eng katta "pozitsiyasiz" bolasidan olardi —
