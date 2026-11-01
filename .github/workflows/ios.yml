@@ -1,0 +1,138 @@
+name: Build IPA (imzosiz)
+
+# Scarlet / Feather / Sideloadly uchun imzosiz IPA yasaydi.
+# Qo'lda ishga tushiriladi: Actions -> "Build IPA (imzosiz)" -> Run workflow
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: iOS platforma papkasini yaratish
+        run: flutter create --platforms=ios --org uz.djigarlar --project-name djigarlar .
+
+      - name: Info.plist ruxsatlari va Podfile
+        run: |
+          python3 - <<'PY'
+          import re, os
+
+          # ---------- Info.plist ----------
+          p = 'ios/Runner/Info.plist'
+          s = open(p).read()
+
+          keys = {
+            'CFBundleDisplayName': 'Djigarlar',
+            'NSCameraUsageDescription':
+                "Video qo'ng'iroq va rasm yuborish uchun kamera kerak",
+            'NSMicrophoneUsageDescription':
+                "Qo'ng'iroq va ovozli xabar uchun mikrofon kerak",
+            'NSPhotoLibraryUsageDescription':
+                'Rasm yuborish uchun galereyaga ruxsat kerak',
+            'NSPhotoLibraryAddUsageDescription':
+                'Rasmni galereyaga saqlash uchun ruxsat kerak',
+          }
+          for k, v in keys.items():
+              if '<key>%s</key>' % k in s:
+                  continue
+              s = s.replace('</dict>\n</plist>',
+                            '\t<key>%s</key>\n\t<string>%s</string>\n</dict>\n</plist>' % (k, v), 1)
+
+          # Fon rejimida ovoz (qo'ng'iroq uzilib qolmasligi uchun)
+          if '<key>UIBackgroundModes</key>' not in s:
+              s = s.replace('</dict>\n</plist>',
+                            '\t<key>UIBackgroundModes</key>\n\t<array>\n\t\t<string>audio</string>\n\t</array>\n</dict>\n</plist>', 1)
+
+          open(p, 'w').write(s)
+          print('--- Info.plist ---')
+          print(s)
+
+          # ---------- Podfile ----------
+          pf = 'ios/Podfile'
+          if os.path.exists(pf):
+              t = open(pf).read()
+              if re.search(r"^\s*#?\s*platform :ios", t, re.M):
+                  t = re.sub(r"^\s*#?\s*platform :ios.*$",
+                             "platform :ios, '15.0'", t, count=1, flags=re.M)
+              else:
+                  t = "platform :ios, '15.0'\n" + t
+              open(pf, 'w').write(t)
+              print('--- Podfile (bosh qismi) ---')
+              print(t[:400])
+          PY
+
+      - name: Firebase sozlamalarini Secrets dan yozish (ixtiyoriy)
+        env:
+          FB_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FB_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FB_SENDER_ID: ${{ secrets.FIREBASE_SENDER_ID }}
+          FB_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          IOS_API_KEY: ${{ secrets.IOS_FIREBASE_API_KEY }}
+          IOS_APP_ID: ${{ secrets.IOS_FIREBASE_APP_ID }}
+        run: |
+          if [ -n "$IOS_API_KEY" ] && [ -n "$IOS_APP_ID" ]; then
+            python3 - <<'PY'
+          import os, re
+          p = 'lib/firebase_config.dart'
+          s = open(p).read()
+          s = s.replace('SHU_YERGA_IOS_API_KEY', os.environ['IOS_API_KEY'])
+          s = s.replace('SHU_YERGA_IOS_APP_ID', os.environ['IOS_APP_ID'])
+          if os.environ.get('FB_API_KEY'):
+              s = re.sub(r"apiKey: '[^']*',\n  appId: '1:[^']*:android:[^']*'",
+                         "apiKey: '%s',\n  appId: '%s'" % (os.environ['FB_API_KEY'], os.environ['FB_APP_ID']),
+                         s, count=1)
+          open(p, 'w').write(s)
+          print('iOS Firebase qiymatlari yozildi')
+          PY
+          else
+            echo "IOS_FIREBASE_API_KEY / IOS_FIREBASE_APP_ID secret topilmadi."
+            echo "lib/firebase_config.dart dagi qiymatlar ishlatiladi."
+          fi
+
+      - run: flutter pub get
+
+      - name: Logotipni o'rnatish (iOS)
+        run: |
+          python3 - <<'PY'
+          p = 'pubspec.yaml'
+          s = open(p).read()
+          s = s.replace('  ios: false', '  ios: true')
+          open(p, 'w').write(s)
+          PY
+          dart run flutter_launcher_icons || echo "logotip o'rnatilmadi - davom etamiz"
+
+      - name: Release build (imzosiz)
+        run: flutter build ios --release --no-codesign
+
+      - name: IPA yasash
+        run: |
+          cd build/ios/iphoneos
+          ls -la
+          mkdir -p Payload
+          cp -r Runner.app Payload/Runner.app
+          # Imzosiz IPA: Scarlet/Feather o'zi qayta imzolaydi
+          rm -rf Payload/Runner.app/_CodeSignature || true
+          zip -qry "$GITHUB_WORKSPACE/Djigarlar.ipa" Payload
+          cd "$GITHUB_WORKSPACE"
+          ls -lh Djigarlar.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: djigarlar-ipa
+          path: Djigarlar.ipa
+          if-no-files-found: error
