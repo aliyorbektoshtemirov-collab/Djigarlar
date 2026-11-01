@@ -11,19 +11,14 @@ const _android = FirebaseOptions(
   projectId: 'djigarlar',
 );
 
-// ---------------------------------------------------------------------------
-// iOS uchun: Firebase Console -> loyiha sozlamalari -> "Ilova qo'shish" -> iOS
-// Bundle ID: uz.djigarlar.djigarlar
-// So'ng GoogleService-Info.plist dagi qiymatlarni shu yerga ko'chiring:
-//   API_KEY      -> apiKey
-//   GOOGLE_APP_ID-> appId   (1:187349473371:ios:...)
-// Yoki GitHub Secrets: IOS_FIREBASE_API_KEY, IOS_FIREBASE_APP_ID
-// ---------------------------------------------------------------------------
+// iOS ilova: uz.djigarlar.djigarlar
+// (GoogleService-Info.plist dagi qiymatlar)
 const _ios = FirebaseOptions(
-  apiKey: 'SHU_YERGA_IOS_API_KEY',
-  appId: 'SHU_YERGA_IOS_APP_ID',
+  apiKey: 'AIzaSyC_IzpJ31B8UgfPb5q56JNUrnPAv4o7cXw',
+  appId: '1:187349473371:ios:3648660037b8ae90ff477e',
   messagingSenderId: '187349473371',
   projectId: 'djigarlar',
+  storageBucket: 'djigarlar.firebasestorage.app',
   iosBundleId: 'uz.djigarlar.djigarlar',
 );
 

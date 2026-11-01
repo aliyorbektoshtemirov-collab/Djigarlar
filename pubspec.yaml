@@ -1,7 +1,7 @@
 name: djigarlar
 description: Djigarlar - messenger (Android)
 publish_to: none
-version: 0.8.4+18
+version: 0.8.5+19
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
